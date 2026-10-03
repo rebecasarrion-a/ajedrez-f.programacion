@@ -1,8 +1,10 @@
 # __________ Constantes del tablero __________
  
 TAMANO_TABLERO: int = 8
-LETRAS_VALIDAS: str = " abcdefgh"
+LETRAS_VALIDAS: str = "abcdefgh"
 NUMEROS_VALIDOS: str = "12345678"
+
+# __________ Estructuras de datos: posición inicial __________
 
 tablero_simbolos: list[list[str]] = [
     ["\u265C", "\u265E", "\u265D", "\u265B", "\u265A", "\u265D", "\u265E", "\u265C"],
@@ -28,16 +30,26 @@ tablero_nombres: list[list[str]] = [
      "rey blanco", "alfil blanco", "caballo blanco", "torre blanca"]
 ]
 
-for letras in LETRAS_VALIDAS:
-    print(letras, end=" ")
-print()
+# __________ Impresión del tablero __________
 
-for fila in tablero_simbolos:
-    for pieza in fila:
-        print(pieza, end=" ")
-    print()
+encabezado: str = "  "
+for indice_columna in range(TAMANO_TABLERO):
+    letra_columna: str = LETRAS_VALIDAS[indice_columna]
+    encabezado: str = encabezado + " " + letra_columna + " "
+print(encabezado)
 
-#PARA cada fila del tablero:
-    #PARA cada casilla de esa fila:
-        #imprimir la casilla
+for indice_fila in range(TAMANO_TABLERO):
+    numero_fila: int = TAMANO_TABLERO -indice_fila
+    linea: str = str(numero_fila) + " "
+    for indice_columna in range(TAMANO_TABLERO):
+        simbolo: str = tablero_simbolos[indice_fila][indice_columna]
+        if simbolo == "":
+            celda: str = " . "
+        else:
+            celda: str = " " + simbolo + " "
+        linea: str = linea + celda
+    print(linea)
 
+print("")
+print("Escribe una casilla o 'salir' para terminar el juego.")
+print("")
