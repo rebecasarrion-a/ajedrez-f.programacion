@@ -53,3 +53,86 @@ for indice_fila in range(TAMANO_TABLERO):
 print("")
 print("Escribe una casilla o 'salir' para terminar el juego.")
 print("")
+
+# __________ Bucle principal: máquina de estados __________
+
+estado: str = "turno_blancas" # SIEMPRE empieza así
+
+if estado == "turno_blancas":
+    print("Turno de las blancas")
+    casilla: str = input("Casilla: ")
+
+    if casilla == "salir":
+        estado: str = "salir"
+    elif len(casilla) == 2 and casilla[0] in LETRAS_VALIDAS and casilla[1] in NUMEROS_VALIDOS:
+        letra_columna: str = casilla[0]
+        columna: int = 0
+        if letra_columna == "a":
+            columna: int = 0
+        elif letra_columna == "b":
+            columna: int = 1
+        elif letra_columna == "c":
+            columna: int = 2
+        elif letra_columna == "d":
+            columna: int = 3
+        elif letra_columna == "e":
+            columna: int = 4
+        elif letra_columna == "f":
+            columna: int = 5
+        elif letra_columna == "g":
+            columna: int = 6
+        elif letra_columna == "h":
+            columna: int = 7
+
+        fila_tablero: int = TAMANO_TABLERO - int(casilla[1])
+        nombre_pieza: str = tablero_nombres[fila_tablero][columna]
+
+        if nombre_pieza == ".":
+            print(f"La casilla {casilla} está vacía.")
+        else:
+            print(f"La casilla {casilla} está ocupada por: {nombre_pieza}.")
+
+        estado: str = "turno_negras"
+    else:
+        print("Casilla no válida. ¡Intenta de nuevo!")
+
+elif estado == "turno_negras":
+    print("Turno de las negras")
+    casilla: str = input("Casilla: ")
+
+    if casilla == "salir":
+        estado: str = "salir"
+    elif len(casilla) == 2 and casilla[0] in LETRAS_VALIDAS and casilla[1] in NUMEROS_VALIDOS:
+        letra_columna: str = casilla[0]
+        columna: int = 0
+        if letra_columna == "a":
+            columna: int = 0
+        elif letra_columna == "b":
+            columna: int = 1
+        elif letra_columna == "c":
+            columna: int = 2
+        elif letra_columna == "d":
+            columna: int = 3
+        elif letra_columna == "e":
+            columna: int = 4
+        elif letra_columna == "f":
+            columna: int = 5
+        elif letra_columna == "g":
+            columna: int = 6
+        elif letra_columna == "h":
+            columna: int = 7
+
+        fila_tablero: int = TAMANO_TABLERO - int(casilla[1])
+        nombre_pieza: str = tablero_nombres[fila_tablero][columna]
+
+        if nombre_pieza == ".":
+            print(f"La casilla {casilla} está vacía.")
+        else:
+            print(f"La casilla {casilla} está ocupada por: {nombre_pieza}.")
+
+        estado: str = "turno_blancas"
+    else:
+        print("Casilla no válida. ¡Intenta de nuevo!")
+
+print("")
+print("Fin de la partida. ¡Gracias por jugar!")
