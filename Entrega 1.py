@@ -46,7 +46,7 @@ encabezado: str = "  "  #El encabezado incluye dos espacios para dejar espacio a
 for indice_columna in range(TAMANO_TABLERO):    #Se recorren las posiciones de las columnas mediante un bucle.
     letra_columna: str = LETRAS_VALIDAS[indice_columna]     #Para cada posición se obtiene la letra correspondiente de LETRAS_VALIDAS (0 > a, 1 > b...)
     encabezado: str = encabezado + " " + letra_columna + " "    #Se incorpora al encabezado con espacios alrededor para que quede centrada
-    print(encabezado)   #Se muestra el encabezado con las letras de las columnas.
+print(encabezado)   #Se muestra el encabezado con las letras de las columnas.
 
 for indice_fila in range(TAMANO_TABLERO):   #Se recorren las posiciones de las filas mediante un bucle.
     numero_fila: int = TAMANO_TABLERO - indice_fila   #Como Las filas están ordenadas de arriba hacia abajo, restamos el índice al tamaño del tablero.
