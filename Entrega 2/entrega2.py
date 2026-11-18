@@ -16,7 +16,7 @@ def convertir_casilla_a_coordenadas(casilla: str) -> tuple[int, int]:
     fila: int = int(casilla[1]) - 1     #Convierte el "número" en un índice de fila. Se resta 1 para adaptar la numeración del ajedrez (1-8) a los índices internos (0-7).
     columna: int = LETRAS_VALIDAS.index(casilla[0])     #Buscando la "letra" en LETRAS_VALIDAS, index() devuelve su posición empezando desde 0, esa es la columna.
 
-    return fila, columna    #Devuelve la coordenada (fila, columna).
+    return fila, columna    #Devuelve una coordenada (fila, columna).
 
 # ________ Comprobación de una casilla ________
 
@@ -40,7 +40,7 @@ def procesar_movimiento(texto: str) -> tuple[str, str] | None:
     """Limpia y comprueba la validez del formato de un movimiento introducido."""
 
     movimiento: str = texto.strip().lower()     #Con el texto introducido: se eliminan espacios sobrantes (strip) y se convierte a minúsculas (lower).
-    partes: list[str] = movimiento.split()      #Separamos el texto origen y el texto destino con espacios (strip).
+    partes: list[str] = movimiento.split()      #Separamos el texto origen y el texto destino con espacios (split).
 
     #Un movimiento debe contener exactamente dos casillas.
     if len(partes) != 2:    
@@ -51,9 +51,9 @@ def procesar_movimiento(texto: str) -> tuple[str, str] | None:
     destino: str = partes[1]
 
     if not es_casilla_valida(origen) or not es_casilla_valida(destino):
-        return None     #Si no es así, devuelve None.
+        return None
 
-    return origen, destino  #DCuando supera todas las condiciones, devuelve el movimiento en el formato correcto.
+    return origen, destino  #Cuando supera todas las condiciones, devuelve el movimiento en el formato correcto.
 
 
 # __________ Pieza: clase, método y subclases __________
@@ -89,13 +89,14 @@ class Caballo(Pieza):
     def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """Siempre que el desplazamiento tenga forma de L."""
 
-        #El recorrido en L se da cuando si
-        if abs(destino[0] - origen[0]) == 2 and abs(destino[1] - origen[1]) == 1:   #se mueve 2 filas y 1 columna.
-            return True
-        if abs(destino[0] - origen[0]) == 1 and abs(destino[1] - origen[1]) == 2:   #O bien, se mueve 1 fila y 2 columnas.
-            return True
-        else:
-            return False    #Si no cumple las posiblidades, no es movimiento válido.
+        diferencia_filas: int = abs(destino[0] - origen[0])
+        diferencia_columnas: int = abs(destino[1] - origen[1])
+
+        if not ((diferencia_filas == 2 and diferencia_columnas == 1) or
+                (diferencia_filas == 1 and diferencia_columnas == 2)):
+            return False
+        
+        return True
 
 class Alfil(Pieza):
     """Se mueve en diagonal."""
@@ -119,7 +120,6 @@ class Dama(Pieza):
         movimiento_recto: bool = (origen[0] == destino[0] or origen[1] == destino[1])
         movimiento_diagonal: bool = (abs(destino[0] - origen[0]) == abs(destino[1] - origen[1]))
 
-        #Si no se cumple ninguna de los dos, el movimiento no se permite (False).
         if not movimiento_recto and not movimiento_diagonal:
             return False
 
@@ -195,6 +195,7 @@ class Peón(Pieza):
 
         # Si no se cumple ninguno de los tres casos anteriores, el movimiento no está permitido para el peón.
         return False
+
 
 # __________ Tablero __________
 
@@ -287,19 +288,17 @@ class Tablero:
         fila_destino: int = destino[0]
         columna_destino: int = destino[1]
 
-        #Conversión de filas a los índices utilizados por la matriz (fila 8 arriba, fila 1 abajo).
+        #Conversión de filas a los índices de la matriz.
         fila_origen_tablero: int = TAMANO_TABLERO - 1 - fila_origen
         fila_destino_tablero: int = TAMANO_TABLERO - 1 - fila_destino
 
-    #El movimiento no se realiza (return False) cuando:
+    #El movimiento no se realiza cuando:
         
-        #El origen y el destino son los mismos.
-        if origen == destino:
+        if origen == destino:       #El origen y el destino son los mismos.
             return False
 
-        #La casilla de origen está vacía.
-        pieza: Pieza | None = self.casillas[fila_origen_tablero][columna_origen]    #Comprobación.
-        if pieza is None:
+        pieza: Pieza | None = self.casillas[fila_origen_tablero][columna_origen]
+        if pieza is None:                                                           #La casilla de origen está vacía.
             return False
 
     #El movimiento se realiza correctamente (return True), si:
@@ -313,42 +312,43 @@ class Tablero:
     def camino_libre(self, origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """Comprueba si las casillas situadas entre el origen y el destino están vacías."""
 
-        diferencia_filas: int = destino[0] - origen[0]  #El valor de la diferencia indica el sentido en el que se recorren las filas.
+        #El valor de las diferencias entre filas indica el sentido del desplazamiento por ellas.
+        diferencia_filas: int = destino[0] - origen[0]
         if diferencia_filas > 0:    
-            paso_fila: int = 1        #Si es positiva, se avanza de una en una hacia arriba.
+            paso_fila: int = 1        #Se avanza de fila en fila hacia arriba.
         elif diferencia_filas < 0:
-            paso_fila: int = -1       #Si es negativa, se retrocede de una en una hacia abajo.
+            paso_fila: int = -1       #Se retrocede de fila en fila hacia abajo.
         else:
-            paso_fila: int = 0        #Si es cero, las filas son las mismas (no se cambia de fila).
+            paso_fila: int = 0        #No se cambia de fila.
 
-        diferencia_columnas: int = destino[1] - origen[1]   #El valor de la diferencia indica el sentido en el que se recorren las columnas.
+        #El valor de las diferencias entre columnas indica el sentido del desplazamiento por ellas.
+        diferencia_columnas: int = destino[1] - origen[1]
         if diferencia_columnas > 0:       
-            paso_columna: int = 1           #Si es positiva, se avanza de una en una hacia la derecha.
+            paso_columna: int = 1           #Se avanza de columna en columna hacia la derecha.
         elif diferencia_columnas < 0:       
-            paso_columna: int = -1          #Si es negativa, se retrocede de una en una hacia izquierda.
+            paso_columna: int = -1          #Se retrocede de columna en columna hacia izquierda.
         else:
-            paso_columna: int = 0           #Si es cero, las columnas son las mismas (no se cambia de columna).
+            paso_columna: int = 0           #No se cambia de columna.
 
-        #Comprobación del camino:
-
-        #Se empieza por la primera casilla posterior al origen: se suma el paso correspondiente a las coordenadas iniciales.
+        #La comprobación empieza en la primera casilla posterior al origen.
         fila_actual: int = origen[0] + paso_fila
         columna_actual: int = origen[1] + paso_columna
 
-        #Mientras no se llegue al destino, se repite la comprobación de condiciones siguiente:
-        while (fila_actual, columna_actual) != destino:     #El destino no se comprueba porque puede haber una pieza rival a capturar."""
+        #Se recorren las casillas intermedias en un bucle while, sin comprobar el destino (puede haber un rival a capturar).
+        while (fila_actual, columna_actual) != destino:
 
-            fila_tablero: int = TAMANO_TABLERO - 1 - fila_actual    #Conversión de la fila al índice de la matriz (fila 8 arriba, fila 1 abajo).
+            fila_tablero: int = TAMANO_TABLERO - 1 - fila_actual    #Conversión de la fila al índice de la matriz.
             
-            #Consulta de pieza en la casilla a comprobar: #Si hay una, termina el método. Si está vacía, avanza a la siguiente casilla.
+            #Consulta de pieza en la casilla a comprobar:
             pieza: Pieza | None = self.casillas[fila_tablero][columna_actual]
             if pieza is not None:
-                return False
-            else:
-                fila_actual = fila_actual + paso_fila           
-                columna_actual = columna_actual + paso_columna
+                return False             #Si hay una, termina el método.
 
-        return True     #El bucle Si se llega al destino sin encontrar obstáculos, el camino está libre.
+            #Si está vacía, avanza a la siguiente.
+            fila_actual = fila_actual + paso_fila           
+            columna_actual = columna_actual + paso_columna
+
+        return True     #El método devuelve True si no han habido piezas en el camino.
 
 
 # __________ Pruebas __________
@@ -356,46 +356,3 @@ class Tablero:
 #Tablero con posición inicial.
 tablero = Tablero()
 tablero.imprimir_tablero()
-
-# __________ Prueba del peón __________
-
-#Crear una un peón en e2.
-peon_blanco: Peón = Peón("blanca", "♙", "peón")
-tablero.casillas[6][4] = peon_blanco
-
-#1 (general): De e2 a e3.
-print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (2, 4)))
-    #True
-
-#2 (primer movimiento sin comprobar que está en primera posición): De e2 a e4.
-print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (3, 4)))
-    #True
-
-    #Colocar una pieza en e3 para bloquear el avance.
-pieza_bloqueadora: Pieza = Pieza("negra", "♟", "peón")
-tablero.casillas[5][4] = pieza_bloqueadora
-
-#3 False: No puede avanzar con la casilla intermedia está ocupada.
-print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (3, 4)))
-
-#4 False: Retroceder de e2 a e1.
-print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (0, 4)))
-
-#5 False: Capturar en f3, que está vacía.
-print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (2, 5)))
-
-    #Colocar una pieza negra en f3 para comprobar la captura.
-pieza_negra: Pieza = Pieza("negra", "♟", "peón")
-tablero.casillas[5][5] = pieza_negra
-
-#5 (captura): Captura en f3, que ahora no está vacía.
-print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (2, 5)))
-    #True
-
-#Creamos un peón negro en e7.
-peon_negro: Peón = Peón("negra", "♟", "peón")
-tablero.casillas[1][4] = peon_negro
-
-#6 (general): De e7 a e6.
-print(peon_negro.es_movimiento_valido(tablero, (6, 4), (5, 4)))
-    #True
