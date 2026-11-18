@@ -59,25 +59,30 @@ def procesar_movimiento(texto: str) -> tuple[str, str] | None:
 # __________ Pieza: clase, método y subclases __________
 
 class Pieza:
-    """Representa una pieza de ajedrez."""
+    """Pieza de ajedrez genérica."""
 
-    def __init__(self, color: str, simbolo: str, nombre: str) -> None:  #Inicializa una pieza con su color, símbolo y nombre.
+    def __init__(self, color: str, símbolo: str, nombre: str) -> None:
         self.color: str = color
-        self.simbolo: str = simbolo
+        self.simbolo: str = símbolo
         self.nombre: str = nombre
 
-    def es_movimiento_valido(   #Comprueba si el movimiento de la pieza es válido. IMPLEMENTAR EN LAS SUBCLASES DE PIEZA
-        self,
-        tablero: "Tablero",
-        origen: tuple[int, int],
-        destino: tuple[int, int]
-    ) -> bool:
-        return False
+    def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
+        """True si la pieza puede ir de origen a destino según sus reglas.""" 
+        return False    #Cada subclase lo definirá
 
-#De moment en les sublases pose pass perq no tenim moviments
+# ________ Subclases: tipos de pieza y definición de movimientos validos ________
+
 class Torre(Pieza):
-    """Representa una torre de ajedrez."""
-    pass
+    """Se mueve en línea recta por filas o columnas."""
+
+    def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
+        """Siempre que el desplazamiento sea en línea recta y no haya piezas en el camino."""
+
+        if origen[0] != destino[0] and origen[1] != destino[1]:     #Si cambian la fila y la columna al mismo tiempo, es un movimiento diagonal
+            return False                                            #y no está permitido.
+
+        #Llama al método camino_libre() del tablero: si este devuelve True, el movimiento de la torre también devuelve True. Si devuelve False, el movimiento devuelve False.
+        return tablero.camino_libre(origen, destino)
 
 class Caballo(Pieza):
     """Representa un caballo de ajedrez."""
@@ -95,15 +100,15 @@ class Rey(Pieza):
     """Representa un rey de ajedrez."""
     pass
 
-class Peon(Pieza):
+class Peón(Pieza):
     """Representa un peón de ajedrez."""
     pass
 
 
-# __________ Tablero: clase y métodos __________ *AÑADIR ANOTACIONES Y EXPLICACIONES
+# __________ Tablero __________
 
 class Tablero:
-    """Representa el tablero de ajedrez."""
+    """Guarda la posición de las piezas y las operaciones sobre el tablero."""
 
     def __init__(self) -> None:
 
@@ -116,7 +121,7 @@ class Tablero:
         #Rellena la matriz con las piezas en sus posiciones iniciales.
         self.colocar_posicion_inicial()
 
-# _____ Métodos: colocar de piezas, imprimir tablero y mover pieza _____
+# _____ Métodos _____
 
     def colocar_posicion_inicial(self) -> None:
         """Coloca todas las piezas en sus posiciones iniciales."""
@@ -152,11 +157,11 @@ class Tablero:
         
         #Peones negros en segunda fila
         for columna in range(TAMANO_TABLERO):
-            self.casillas[1][columna] = Pieza("negra", "♟", "peon")
+            self.casillas[1][columna] = Pieza("negra", "♟", "peón")
 
         #Peones blancos en séptima fila
         for columna in range(TAMANO_TABLERO):
-            self.casillas[6][columna] = Pieza("blanca", "♙", "peon")
+            self.casillas[6][columna] = Pieza("blanca", "♙", "peón")
 
         #Piezas blancas en octava fila
         for columna in range(TAMANO_TABLERO):
@@ -182,7 +187,7 @@ class Tablero:
             print()     ##Se muestra la línea completa con el símbolo de cada casilla.
 
     def mover_pieza(self, origen: tuple[int, int], destino: tuple[int, int]) -> bool:
-        """Mueve una pieza desde la casilla de origen hasta la casilla de destino. SIN REGLAS."""
+        """Mueve una pieza desde la casilla de origen hasta la casilla de destino."""
 
         #Se separa la fila y la columna de las casillas de origen y destino.
         fila_origen: int = origen[0]
@@ -203,25 +208,59 @@ class Tablero:
 
         #La casilla de origen está vacía.
         pieza: Pieza | None = self.casillas[fila_origen_tablero][columna_origen]    #Comprobación.
-
         if pieza is None:
             return False
 
     #El movimiento se realiza correctamente (return True), si:
     
-        #La casilla de destino está ocupada por una pieza, esta es sustituida (CAPTURA PROVISIONAL).
+        #La casilla de destino está ocupada por una pieza, esta es sustituida (*CAPTURA PROVISIONAL).
         self.casillas[fila_destino_tablero][columna_destino] = pieza
         self.casillas[fila_origen_tablero][columna_origen] = None   #Y se vacía la casilla de origen.
 
         return True
 
-# __________ Pruebas de este commit __________
+    def camino_libre(self, origen: tuple[int, int], destino: tuple[int, int]) -> bool:
+        """Comprueba si las casillas situadas entre el origen y el destino están vacías."""
 
-#Crea un tablero con posición inicial.
+        diferencia_filas: int = destino[0] - origen[0]  #El valor de la diferencia indica el sentido en el que se recorren las filas.
+        if diferencia_filas > 0:    
+            paso_fila: int = 1        #Si es positiva, se avanza de una en una hacia arriba.
+        elif diferencia_filas < 0:
+            paso_fila: int = -1       #Si es negativa, se retrocede de una en una hacia abajo.
+        else:
+            paso_fila: int = 0        #Si es cero, las filas son las mismas (no se cambia de fila).
+
+        diferencia_columnas: int = destino[1] - origen[1]   #El valor de la diferencia indica el sentido en el que se recorren las columnas.
+        if diferencia_columnas > 0:       
+            paso_columna: int = 1           #Si es positiva, se avanza de una en una hacia la derecha.
+        elif diferencia_columnas < 0:       
+            paso_columna: int = -1          #Si es negativa, se retrocede de una en una hacia izquierda.
+        else:
+            paso_columna: int = 0           #Si es cero, las columnas son las mismas (no se cambia de columna).
+
+        #Comprobación del camino:
+
+        #Se empieza por la primera casilla posterior al origen: se suma el paso correspondiente a las coordenadas iniciales.
+        fila_actual: int = origen[0] + paso_fila
+        columna_actual: int = origen[1] + paso_columna
+
+        #Mientras no se llegue al destino, se repite la comprobación de condiciones siguiente:
+        while (fila_actual, columna_actual) != destino:     #El destino no se comprueba porque puede haber una pieza rival a capturar."""
+
+            fila_tablero: int = TAMANO_TABLERO - 1 - fila_actual    #Conversión de la fila al índice de la matriz (fila 8 arriba, fila 1 abajo).
+
+            pieza: Pieza | None = self.casillas[fila_tablero][columna_actual]    #Consulta de pieza en la casilla a comprobar.
+            if pieza is not None:
+                return False        #Si hay una, el camino está bloqueado y termina el método.
+            else:   #Si no encontramos ninguna pieza, avanzamos a la siguiente casilla.
+                fila_actual = fila_actual + paso_fila
+                columna_actual = columna_actual + paso_columna
+
+        return True     #Si se llega al destino sin encontrar obstáculos, el camino está libre.
+
+
+# __________ Pruebas __________
+
+#Tablero con posición inicial.
 tablero = Tablero()
-
-#Movimiento: peón blanco de e2 a e4.
-movimiento_realizado: bool = tablero.mover_pieza((1, 4), (3, 4))
-
-#¿Se ha realizado correctamente? Imprimir movimiento.
 tablero.imprimir_tablero()
