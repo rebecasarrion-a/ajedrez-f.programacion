@@ -137,9 +137,64 @@ class Rey(Pieza):
             return True     #Si las distancias son 1, el movimiento es válido.
 
 class Peón(Pieza):
-    """Representa un peón de ajedrez."""
-    pass
 
+    def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
+        """Se mueve una casilla, o dos si es el primer movimiento.
+        También puede capturar una pieza rival desplazándose una casilla en diagonal hacia delante."""
+
+        #Dirección de avance según color.
+        if self.color == "blanca":  #Blancas avanzan aumentando la fila.
+            direccion: int = 1
+            fila_inicial: int = 1
+        else:                       #Negras avanzan disminuyéndola.
+            direccion = -1
+            fila_inicial = 6
+
+        #Calculo de la distancia que se desplaza el peón por filas y columnas.
+        diferencia_filas: int = destino[0] - origen[0]
+        diferencia_columnas: int = abs(destino[1] - origen[1])
+
+        fila_destino_tablero: int = TAMANO_TABLERO - 1 - destino[0]     #Conversión de la fila al índice de la matriz (fila 8 arriba, fila 1 abajo).
+
+        #Consulta de pieza en la casilla de destino.
+        pieza_destino: Pieza | None = tablero.casillas[fila_destino_tablero][destino[1]]
+
+        # __ CASO GENERAL: avanzar una casilla hacia delante (el destino tiene que estar vacío) __
+        
+        if diferencia_filas == direccion and diferencia_columnas == 0:
+            if pieza_destino is None:
+                return True
+            else:
+                return False
+
+        # __ CASO PRIMER MOVIMIENTO: avanzar dos casillas hacia delante (el destino tiene que estar vacío) __
+        
+        if diferencia_filas == 2 * direccion and diferencia_columnas == 0:
+            if origen[0] != fila_inicial:   #Solo puede hacerlo si todavía está en su fila inicial.
+                return False
+
+            # _ Casilla intermedia: posición y consulta _
+            fila_intermedia: int = origen[0] + direccion
+            fila_intermedia_tablero: int = TAMANO_TABLERO - 1 - fila_intermedia
+
+            pieza_intermedia: Pieza | None = tablero.casillas[fila_intermedia_tablero][origen[1]]
+
+            if pieza_intermedia is None and pieza_destino is None:      #Las dos casillas deben estar vacías para avanzar.
+                return True
+            else:
+                return False
+
+        # __ CASO CAPTURA: solo puede capturar al rival en diagonal __
+        
+        if diferencia_filas == direccion and diferencia_columnas == 1:      #Movimiento diagonal (avanza una fila y se desplaza una columna).
+            if pieza_destino is not None:
+                if pieza_destino.color != self.color:   #Solo captura si hay una pieza de otro color en el destino.
+                    return True
+            else:
+                return False
+
+        # Si no se cumple ninguno de los tres casos anteriores, el movimiento no está permitido para el peón.
+        return False
 
 # __________ Tablero __________
 
@@ -302,20 +357,45 @@ class Tablero:
 tablero = Tablero()
 tablero.imprimir_tablero()
 
-# __________ Prueba del caballo __________
+# __________ Prueba del peón __________
 
-#Crear una un rey en e1.
-rey_prueba: Rey = Rey("blanca", "♔", "rey")
-tablero.casillas[7][4] = rey_prueba
+#Crear una un peón en e2.
+peon_blanco: Peón = Peón("blanca", "♙", "peón")
+tablero.casillas[6][4] = peon_blanco
 
-#1: De e1 a e2. (True, desplazamiento correcto de una fila).
-print(rey_prueba.es_movimiento_valido(tablero, (0, 4), (1, 4)))
+#1 (general): De e2 a e3.
+print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (2, 4)))
+    #True
 
-#2: De e1 a f1. (True, desplazamiento correcto de una columna).
-print(rey_prueba.es_movimiento_valido(tablero, (0, 4), (0, 5)))
+#2 (primer movimiento sin comprobar que está en primera posición): De e2 a e4.
+print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (3, 4)))
+    #True
 
-#3: De e1 a f2. (True, desplazamiento diagonal de una fila y una columna).
-print(rey_prueba.es_movimiento_valido(tablero, (0, 4), (1, 5)))
+    #Colocar una pieza en e3 para bloquear el avance.
+pieza_bloqueadora: Pieza = Pieza("negra", "♟", "peón")
+tablero.casillas[5][4] = pieza_bloqueadora
 
-#4: De e1 a e3. (False, desplazamiento de dos filas).
-print(rey_prueba.es_movimiento_valido(tablero, (0, 4), (2, 4)))
+#3 False: No puede avanzar con la casilla intermedia está ocupada.
+print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (3, 4)))
+
+#4 False: Retroceder de e2 a e1.
+print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (0, 4)))
+
+#5 False: Capturar en f3, que está vacía.
+print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (2, 5)))
+
+    #Colocar una pieza negra en f3 para comprobar la captura.
+pieza_negra: Pieza = Pieza("negra", "♟", "peón")
+tablero.casillas[5][5] = pieza_negra
+
+#5 (captura): Captura en f3, que ahora no está vacía.
+print(peon_blanco.es_movimiento_valido(tablero, (1, 4), (2, 5)))
+    #True
+
+#Creamos un peón negro en e7.
+peon_negro: Peón = Peón("negra", "♟", "peón")
+tablero.casillas[1][4] = peon_negro
+
+#6 (general): De e7 a e6.
+print(peon_negro.es_movimiento_valido(tablero, (6, 4), (5, 4)))
+    #True
