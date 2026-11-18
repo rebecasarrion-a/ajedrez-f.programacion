@@ -80,7 +80,7 @@ class Torre(Pieza):
 
         if origen[0] != destino[0] and origen[1] != destino[1]:     #Si cambian la fila y la columna al mismo tiempo, es un movimiento diagonal
             return False                                            #y no está permitido.
-
+        
         #Llama al método camino_libre() del tablero: si este devuelve True, el movimiento de la torre también devuelve True. Si devuelve False, el movimiento devuelve False.
         return tablero.camino_libre(origen, destino)
 
@@ -89,8 +89,17 @@ class Caballo(Pieza):
     pass
 
 class Alfil(Pieza):
-    """Representa un alfil de ajedrez."""
-    pass
+    """Se mueve en diagonal."""
+
+    def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
+        """Si recorre el mismo número de casillas por las filas y por las columnas y no hay piezas en el camino."""
+
+        #Si la diferencia de filas y columnas no es la misma,  el movimiento no es diagonal y devuelve False.
+        if abs(destino[0] - origen[0]) != abs(destino[1] - origen[1]):     #abs() compara las distancias sin importar la dirección hacia la que se mueve el alfil.
+            return False
+                
+        #Llama al método camino_libre() del tablero: si este devuelve True, el movimiento de la torre también devuelve True. Si devuelve False, el movimiento devuelve False.
+        return tablero.camino_libre(origen, destino)
 
 class Dama(Pieza):
     """Representa una dama de ajedrez."""
@@ -248,15 +257,16 @@ class Tablero:
         while (fila_actual, columna_actual) != destino:     #El destino no se comprueba porque puede haber una pieza rival a capturar."""
 
             fila_tablero: int = TAMANO_TABLERO - 1 - fila_actual    #Conversión de la fila al índice de la matriz (fila 8 arriba, fila 1 abajo).
-
-            pieza: Pieza | None = self.casillas[fila_tablero][columna_actual]    #Consulta de pieza en la casilla a comprobar.
+            
+            #Consulta de pieza en la casilla a comprobar: #Si hay una, termina el método. Si está vacía, avanza a la siguiente casilla.
+            pieza: Pieza | None = self.casillas[fila_tablero][columna_actual]
             if pieza is not None:
-                return False        #Si hay una, el camino está bloqueado y termina el método.
-            else:   #Si no encontramos ninguna pieza, avanzamos a la siguiente casilla.
-                fila_actual = fila_actual + paso_fila
+                return False
+            else:
+                fila_actual = fila_actual + paso_fila           
                 columna_actual = columna_actual + paso_columna
 
-        return True     #Si se llega al destino sin encontrar obstáculos, el camino está libre.
+        return True     #El bucle Si se llega al destino sin encontrar obstáculos, el camino está libre.
 
 
 # __________ Pruebas __________
@@ -264,3 +274,21 @@ class Tablero:
 #Tablero con posición inicial.
 tablero = Tablero()
 tablero.imprimir_tablero()
+
+# __________ Prueba del alfil __________
+
+#Crear un alfil blanco en c1 (fila 7, columna 2).
+alfil_prueba: Alfil = Alfil("blanca", "♗", "alfil")
+tablero.casillas[7][2] = alfil_prueba
+
+#1: De c1 a f4 (! El peón de d2 bloquea el camino, devolverá False).
+print(alfil_prueba.es_movimiento_valido(tablero, (0, 2), (3, 5)))
+
+    #Se quita el peón:
+tablero.casillas[6][3] = None
+
+#2: Otra vez, pero sin el peón (Ahora devolverá True)
+print(alfil_prueba.es_movimiento_valido(tablero, (0, 2), (3, 5)))
+
+#3: De c1 a c4 (! Es movimiento vertical, devolverá False).
+print(alfil_prueba.es_movimiento_valido(tablero, (0, 2), (3, 2)))
