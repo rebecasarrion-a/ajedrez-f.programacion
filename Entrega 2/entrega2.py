@@ -126,8 +126,15 @@ class Dama(Pieza):
         return tablero.camino_libre(origen, destino)    #Si se cumplen, devuelve lo que devuelva el método camino_libre().
 
 class Rey(Pieza):
-    """Representa un rey de ajedrez."""
-    pass
+    """Se mueve una casilla, en cualquier dirección."""
+
+    def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
+        """Siempre que se desplace una sola casilla."""
+
+        if abs(destino[0] - origen[0]) > 1 or abs(destino[1] - origen[1]) > 1:
+            return False
+        else:
+            return True     #Si las distancias son 1, el movimiento es válido.
 
 class Peón(Pieza):
     """Representa un peón de ajedrez."""
@@ -297,18 +304,18 @@ tablero.imprimir_tablero()
 
 # __________ Prueba del caballo __________
 
-#Crear una un caballo en b1.
-caballo_prueba: Caballo = Caballo("blanca", "♘", "caballo")
-tablero.casillas[7][1] = caballo_prueba
+#Crear una un rey en e1.
+rey_prueba: Rey = Rey("blanca", "♔", "rey")
+tablero.casillas[7][4] = rey_prueba
 
-#1: De b1 a c3 (Debería devolver True, es válido).
-print(caballo_prueba.es_movimiento_valido(tablero, (0, 1), (2, 2)))
+#1: De e1 a e2. (True, desplazamiento correcto de una fila).
+print(rey_prueba.es_movimiento_valido(tablero, (0, 4), (1, 4)))
 
-#2: De b1 a a3 (Debería devolver True, es válido).
-print(caballo_prueba.es_movimiento_valido(tablero, (0, 1), (2, 0)))
+#2: De e1 a f1. (True, desplazamiento correcto de una columna).
+print(rey_prueba.es_movimiento_valido(tablero, (0, 4), (0, 5)))
 
-#3: De b1 a b3 (Devuelve False, es vertical).
-print(caballo_prueba.es_movimiento_valido(tablero, (0, 1), (2, 1)))
+#3: De e1 a f2. (True, desplazamiento diagonal de una fila y una columna).
+print(rey_prueba.es_movimiento_valido(tablero, (0, 4), (1, 5)))
 
-#4: De b1 a d2 (Es válido, devuelve True, pero salta los peones y se pone encima de uno).
-print(caballo_prueba.es_movimiento_valido(tablero, (0, 1), (1, 3)))
+#4: De e1 a e3. (False, desplazamiento de dos filas).
+print(rey_prueba.es_movimiento_valido(tablero, (0, 4), (2, 4)))
