@@ -81,8 +81,7 @@ class Torre(Pieza):
         if origen[0] != destino[0] and origen[1] != destino[1]:     #Si cambian la fila y la columna al mismo tiempo, es un movimiento diagonal
             return False                                            #y no está permitido.
         
-        #Llama al método camino_libre() del tablero: si este devuelve True, el movimiento de la torre también devuelve True. Si devuelve False, el movimiento devuelve False.
-        return tablero.camino_libre(origen, destino)
+        return tablero.camino_libre(origen, destino)    #Si se mueve en línea recta, devuelve lo que devuelva el método camino_libre().
 
 class Caballo(Pieza):
     """Representa un caballo de ajedrez."""
@@ -92,18 +91,29 @@ class Alfil(Pieza):
     """Se mueve en diagonal."""
 
     def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
-        """Si recorre el mismo número de casillas por las filas y por las columnas y no hay piezas en el camino."""
+        """Siempre que el desplazamiento sea en diagonal y no hay piezas en el camino."""
 
-        #Si la diferencia de filas y columnas no es la misma,  el movimiento no es diagonal y devuelve False.
+        #Si la diferencia de filas no coincide con la decolumnas no es la misma, el movimiento no es diagonal y devuelve False.
         if abs(destino[0] - origen[0]) != abs(destino[1] - origen[1]):     #abs() compara las distancias sin importar la dirección hacia la que se mueve el alfil.
             return False
                 
-        #Llama al método camino_libre() del tablero: si este devuelve True, el movimiento de la torre también devuelve True. Si devuelve False, el movimiento devuelve False.
-        return tablero.camino_libre(origen, destino)
+        return tablero.camino_libre(origen, destino)    #Si es la misma, devuelve lo que devuelva el método camino_libre().
 
 class Dama(Pieza):
-    """Representa una dama de ajedrez."""
-    pass
+    """Se mueve en horizontal, vertical o diagonal."""
+
+    def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
+        """Siempre que el desplazamiento sea horizontal, vertical o diagonal y no haya piezas en el camino."""
+
+        #Definición de los movimientos permitidos:
+        movimiento_recto: bool = (origen[0] == destino[0] or origen[1] == destino[1])
+        movimiento_diagonal: bool = (abs(destino[0] - origen[0]) == abs(destino[1] - origen[1]))
+
+        #Si no se cumple ninguna de los dos, el movimiento no se permite (False).
+        if not movimiento_recto and not movimiento_diagonal:
+            return False
+
+        return tablero.camino_libre(origen, destino)    #Si se cumplen, devuelve lo que devuelva el método camino_libre().
 
 class Rey(Pieza):
     """Representa un rey de ajedrez."""
@@ -275,20 +285,26 @@ class Tablero:
 tablero = Tablero()
 tablero.imprimir_tablero()
 
-# __________ Prueba del alfil __________
+# __________ Prueba de la dama __________
 
-#Crear un alfil blanco en c1 (fila 7, columna 2).
-alfil_prueba: Alfil = Alfil("blanca", "♗", "alfil")
-tablero.casillas[7][2] = alfil_prueba
+#Crear una dama...
+dama_prueba: Dama = Dama("blanca", "♕", "dama")
+tablero.casillas[7][3] = dama_prueba
 
-#1: De c1 a f4 (! El peón de d2 bloquea el camino, devolverá False).
-print(alfil_prueba.es_movimiento_valido(tablero, (0, 2), (3, 5)))
+#1 RECTO: De d1 a d4. (! El peón de d2 lo impide, debe devolver False).
+print(dama_prueba.es_movimiento_valido(tablero, (0, 3), (3, 3)))
 
-    #Se quita el peón:
+    #Quitar el peón de d2.
 tablero.casillas[6][3] = None
 
-#2: Otra vez, pero sin el peón (Ahora devolverá True)
-print(alfil_prueba.es_movimiento_valido(tablero, (0, 2), (3, 5)))
+#2: Otra vez, sin el peón (Debería devolver True).
+print(dama_prueba.es_movimiento_valido(tablero, (0, 3), (3, 3)))
 
-#3: De c1 a c4 (! Es movimiento vertical, devolverá False).
-print(alfil_prueba.es_movimiento_valido(tablero, (0, 2), (3, 2)))
+    #Quitar peón de e2 para despejar la diagonal.
+tablero.casillas[6][4] = None
+
+#3 DIAGONAL: De d1 a g4 (Debería devolver True).
+print(dama_prueba.es_movimiento_valido(tablero, (0, 3), (3, 6)))
+
+#4 NO VÁLIDO: De d1 a e4 (Debería devolver False).
+print(dama_prueba.es_movimiento_valido(tablero, (0, 3), (3, 4)))
