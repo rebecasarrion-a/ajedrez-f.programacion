@@ -239,8 +239,6 @@ class Tablero:
             ("torre", "♜")
         ]
 
-        #Distribución:
-
         #Piezas negras en primera fila.
         for columna in range(TAMANO_TABLERO):
             nombre, simbolo = piezas_negras[columna]
@@ -279,6 +277,7 @@ class Tablero:
             elif nombre == "rey":
                 self.casillas[7][columna] = Rey("blanca", simbolo, nombre)
 
+
     def imprimir_tablero(self) -> None:
         """Muestra el tablero con sus coordenadas."""
 
@@ -298,6 +297,7 @@ class Tablero:
             print()     ##Se muestra la línea completa con el símbolo de cada casilla.
 
         print()  # Línea en blanco después del tablero.
+
 
     def mover_pieza(self, origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """Mueve una pieza desde la casilla de origen hasta la casilla de destino."""
@@ -329,6 +329,7 @@ class Tablero:
         self.casillas[fila_origen_tablero][columna_origen] = None   #Y se vacía la casilla de origen.
 
         return True
+
 
     def camino_libre(self, origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """Comprueba si las casillas situadas entre el origen y el destino están vacías."""
@@ -373,9 +374,9 @@ class Tablero:
 
             # ____ Validación general de movimientos ____
 
+
     def validar_movimiento(self, texto: str, color_turno: str) -> str:
-        """Comprueba si un movimiento es válido para el jugador al que le corresponde el turno.
-        Realiza las comprobaciones y devuelve un texto que explica el primer motivo de rechazo."""
+        """Comprueba si un movimiento es válido para el jugador al que le corresponde el turno y explica el primer motivo de rechazo."""
 
         #1. Comprobación del formato con procesar_movimiento:
         movimiento: tuple[str, str] | None = procesar_movimiento(texto)
@@ -409,7 +410,7 @@ class Tablero:
         if pieza_origen.color != color_turno:                                           #Solo se permite mover piezas del jugador al que le toca jugar.
             return "Movimiento no válido. Es el turno de las " + color_turno + "s."
 
-        #5. Comprobación del color de pieza en el destino:
+        #5. Comprobación de pieza en el destino: diferente color y rey.
 
         fila_destino_tablero: int = TAMANO_TABLERO - 1 - destino[0]     #Conversión de la fila al índice de la matriz.
 
@@ -419,6 +420,11 @@ class Tablero:
             if pieza_destino.color == color_turno:
                 return "Movimiento no válido. La casilla de destino está ocupada por una pieza propia."
 
+        #El rey no se puede captura: la partida termina por jaque mate.
+        if pieza_destino is not None:
+            if pieza_destino.nombre == "rey":
+                return "Movimiento no válido. No se puede capturar al rey."
+
         #6. Comprobación de las reglas de cada pieza:
 
         #Se llama al método correspondiente al tipo de pieza.
@@ -427,11 +433,142 @@ class Tablero:
         if not movimiento_permitido:
             return "Movimiento no válido para esta pieza (" + pieza_origen.nombre + ")."
 
+        #7. Comprobación de que no dejamos al rey propio en jaque.
+
+        if self.deja_rey_en_jaque(origen, destino, color_turno):
+            return "Movimiento no válido. El rey quedaría en jaque."
+
         #Si el movimiento supera todas las comprobaciones anteriores, se devuelve un texto vacío para indicar que es válido.
         return ""
 
+    
+    def buscar_rey(self, color: str) -> tuple[int, int] | None:
+        """Busca el rey del color indicado y devuelve sus coordenadas."""
 
-# __________ Gestión de un turno __________
+        for fila in range(TAMANO_TABLERO):
+            for columna in range(TAMANO_TABLERO):
+
+                pieza: Pieza | None = self.casillas[fila][columna]
+
+                if pieza is not None:
+                    if pieza.nombre == "rey" and pieza.color == color:
+
+                        fila_coordenada: int = TAMANO_TABLERO - 1 - fila
+
+                        return fila_coordenada, columna
+
+        return None
+
+
+    def casilla_atacada(self, casilla: tuple[int, int], color_atacante: str) -> bool:
+        """Comprueba si alguna pieza del color indicado podría atacar cierta casilla."""
+
+        for fila in range(TAMANO_TABLERO):              #Se recorren todas las casillas mediante un bucle.
+            for columna in range(TAMANO_TABLERO):
+
+                #Se consulta la piezaque hay en cada casilla.
+                pieza: Pieza | None = self.casillas[fila][columna]
+
+                if pieza is not None:
+                    if pieza.color == color_atacante:       #Si es del color atacante, se comprueba su movimiento.
+
+                        fila_origen: int = TAMANO_TABLERO - 1 - fila
+                        origen: tuple[int, int] = (fila_origen, columna)
+
+                        #Caso peones: ataque diagonal.
+                        if pieza.nombre == "peón":
+
+                            if color_atacante == "blanca":
+                                direccion: int = 1
+                            else:
+                                direccion = -1
+
+                            diferencia_filas: int = casilla[0] - origen[0]
+                            diferencia_columnas: int = abs(casilla[1] - origen[1])
+
+                            if diferencia_filas == direccion and diferencia_columnas == 1:
+                                return True
+
+                        #Otros casos: reglas propias.
+                        else:
+                            if origen != casilla:
+                                if pieza.es_movimiento_valido(self, origen, casilla):
+                                    return True
+
+        return False    #Ninguna pieza del color indicado ataca la casilla.
+
+
+    def esta_en_jaque(self, color: str) -> bool:
+        """Comprueba si el rey del color indicado está en jaque."""
+
+        posicion_rey: tuple[int, int] | None = self.buscar_rey(color)
+
+        if posicion_rey is None:
+            return False
+
+        if color == "blanca":
+            color_atacante: str = "negra"
+        else:
+            color_atacante = "blanca"
+
+        return self.casilla_atacada(posicion_rey, color_atacante)
+
+
+    def deja_rey_en_jaque(self, origen: tuple[int, int], destino: tuple[int, int], color: str) -> bool:
+        """Simula un movimiento y comprueba si deja al rey propio en jaque."""
+
+        #Convierte las filas a índices de la matriz.
+        fila_origen: int = TAMANO_TABLERO - 1 - origen[0]
+        fila_destino: int = TAMANO_TABLERO - 1 - destino[0]
+
+        #Guardar las piezas de ambas casillas.
+        pieza_origen: Pieza | None = self.casillas[fila_origen][origen[1]]
+        pieza_destino: Pieza | None = self.casillas[fila_destino][destino[1]]
+
+        #Simular el movimiento.
+        self.casillas[fila_destino][destino[1]] = pieza_origen
+        self.casillas[fila_origen][origen[1]] = None
+
+        #Comprobamos si el rey está en jaque.
+        rey_en_jaque: bool = self.esta_en_jaque(color)
+
+        #Se restaura el tablero a su posición original.
+        self.casillas[fila_origen][origen[1]] = pieza_origen
+        self.casillas[fila_destino][destino[1]] = pieza_destino
+
+        return rey_en_jaque
+
+
+    def tiene_movimientos_validos(self, color: str) -> bool:
+        """Comprueba si existe algún movimiento legal para el color indicado."""
+
+        for fila in range(TAMANO_TABLERO):              #Recorre todas las casillas buscando piezas propias.
+            for columna in range(TAMANO_TABLERO):
+
+                pieza: Pieza | None = self.casillas[fila][columna]
+
+                if pieza is not None:
+                    if pieza.color == color:
+
+                        fila_origen: int = TAMANO_TABLERO - fila        #Convertir la posición de la pieza a una casilla.
+                        casilla_origen: str = (LETRAS_VALIDAS[columna] + str(fila_origen))
+
+                        #Probar todos los posibles destinos:
+                        for fila_destino in range(TAMANO_TABLERO):
+                            for columna_destino in range(TAMANO_TABLERO):
+
+                                casilla_destino: str = (LETRAS_VALIDAS[columna_destino]+ str(TAMANO_TABLERO - fila_destino))
+                                movimiento: str = (casilla_origen + " " + casilla_destino)
+
+                                #Se reutiliza el validador completo.
+                                motivo: str = self.validar_movimiento(movimiento, color)
+
+                                if motivo == "":
+                                    return True
+
+        # Ninguna pieza tiene un movimiento legal.
+        return False
+
 
 def gestionar_turno(tablero: Tablero, color_turno: str) -> str:
     """Pide un movimiento y devuelve el resultado del turno."""
@@ -480,44 +617,77 @@ def gestionar_turno(tablero: Tablero, color_turno: str) -> str:
 
     return "valido"
 
+def comprobar_estado_partida(tablero: Tablero, color: str) -> bool:
+    """Anuncia jaque, jaque mate o rey ahogado y devuelve si terminó la partida."""
+
+    en_jaque: bool = tablero.esta_en_jaque(color)
+    tiene_movimientos: bool = tablero.tiene_movimientos_validos(color)
+
+    if en_jaque:
+        if not tiene_movimientos:
+            print("¡Jaque mate!")
+            if color == "blanca":
+                print("Han ganado las negras.")
+            else:
+                print("Han ganado las blancas.")
+            return True
+        print("¡Jaque al rey de las " + color + "s!")
+
+    elif not tiene_movimientos:
+        print("¡Rey ahogado!")
+        print("La partida termina en tablas.")
+        return True
+
+    return False
+
 
 # __________ Bucle principal: máquina de estados __________
 
 """El juego utiliza una máquina de estados que alterna entre el turno de las blancas y el turno de las negras."""
 
-# ________ Tablero inicial ________
+def jugar_partida() -> None:
+    """Gestiona los turnos y el final de la partida."""
 
-tablero: Tablero = Tablero()
+    # ________ Tablero y estado inicial ________
 
-tablero.imprimir_tablero()
+    tablero: Tablero = Tablero()
+    tablero.imprimir_tablero()
 
-# ________ Turno de las blancas ________
+    estado: str = "turno_blancas"       #El estado inicial de una partida nueva siempre es "turno_blancas".
 
-estado: str = "turno_blancas"       #El estado inicial de una partida nueva siempre es "turno_blancas".
+    while estado != "fin_partida":
 
-while estado != "fin_partida":
+        # ________ Turno de las blancas ________
+        if estado == "turno_blancas":
+            resultado: str = gestionar_turno(tablero, "blanca")     #Muestra de quién es el turno y pide una orden.
 
-    if estado == "turno_blancas":
+            if resultado == "salir":        #Se cambia el estado a "salir" y el bucle termina.
+                estado = "fin_partida"
+            elif resultado == "valido":    
+                partida_terminada: bool = comprobar_estado_partida(tablero, "negra")
+                if partida_terminada:
+                    estado = "fin_partida"
+                else: 
+                    estado = "turno_negras"     #Se cambia el estado a "turno_negras".
 
-        resultado: str = gestionar_turno(tablero, "blanca")     #Muestra de quién es el turno y pide una orden.
+        # ________ Turno de las negras ________
+            #Este bloque funciona como el anterior, y después de una consulta válida devuelve el turno a las blancas.
 
-        if resultado == "salir":        #Se cambia el estado a "salir" y el bucle termina.
-            estado = "fin_partida"
+        elif estado == "turno_negras":
+            resultado = gestionar_turno(tablero, "negra")
 
-        elif resultado == "valido":     #Si se valida el movimiento, se cambia el estado a "turno_negras".
-            estado = "turno_negras"
+            if resultado == "salir":
+                estado = "fin_partida"
+            elif resultado == "valido":
+                partida_terminada = comprobar_estado_partida(tablero, "blanca")
+                if partida_terminada:
+                    estado = "fin_partida"
+                else:
+                    estado = "turno_blancas"
 
-# ________ Turno de las negras ________
-    #Este bloque funciona como el anterior, y después de una consulta válida devuelve el turno a las blancas.
+        # Si el movimiento es inválido, no cambia el estado.
 
-    elif estado == "turno_negras":
+    print("Fin de la partida.")
 
-        resultado = gestionar_turno(tablero, "negra")
-
-        if resultado == "salir":
-            estado = "fin_partida"
-
-        elif resultado == "valido":
-            estado = "turno_blancas"
-
-print("Fin de la partida.")
+if __name__ == "__main__":
+    jugar_partida()
