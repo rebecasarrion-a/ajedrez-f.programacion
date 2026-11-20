@@ -372,8 +372,6 @@ class Tablero:
 
         return True     #El método devuelve True si no han habido piezas en el camino.
 
-            # ____ Validación general de movimientos ____
-
 
     def validar_movimiento(self, texto: str, color_turno: str) -> str:
         """Comprueba si un movimiento es válido para el jugador al que le corresponde el turno y explica el primer motivo de rechazo."""
@@ -382,7 +380,7 @@ class Tablero:
         movimiento: tuple[str, str] | None = procesar_movimiento(texto)
 
         if movimiento is None:
-            return "Formato de movimiento no válido. Escribe origen y destino, por ejemplo: e2 e4."
+            return "Formato no válido. Escribe origen y destino, por ejemplo: e2 e4."
 
             #Separamos las dos casillas que devuelve procesar_movimiento().
         casilla_origen: str = movimiento[0]
@@ -394,7 +392,7 @@ class Tablero:
         #2. Comprobación de origen y destino iguales:
 
         if origen == destino:
-            return "Movimiento no válido. La pieza no se mueve."
+            return "El origen y el destino son iguales. La pieza no se mueve."
 
         #3. Comprobación de que hay una pieza en el origen:
 
@@ -403,12 +401,12 @@ class Tablero:
         pieza_origen: Pieza | None = self.casillas[fila_origen_tablero][origen[1]]
 
         if pieza_origen is None:
-            return "Movimiento no válido. No hay ninguna pieza en la casilla de origen."
+            return "No hay ninguna pieza en la casilla de origen."
 
         #4. Comprobación del color del turno:
 
         if pieza_origen.color != color_turno:                                           #Solo se permite mover piezas del jugador al que le toca jugar.
-            return "Movimiento no válido. Es el turno de las " + color_turno + "s."
+            return "No es tu turno, es el de las " + color_turno + "s."
 
         #5. Comprobación de pieza en el destino: diferente color y rey.
 
@@ -418,12 +416,12 @@ class Tablero:
 
         if pieza_destino is not None:                        #Si la hay, no puede ser del mismo color de las piezas en turno.
             if pieza_destino.color == color_turno:
-                return "Movimiento no válido. La casilla de destino está ocupada por una pieza propia."
+                return "La casilla de destino está ocupada por una pieza propia."
 
         #El rey no se puede captura: la partida termina por jaque mate.
         if pieza_destino is not None:
             if pieza_destino.nombre == "rey":
-                return "Movimiento no válido. No se puede capturar al rey."
+                return "No se puede capturar al rey."
 
         #6. Comprobación de las reglas de cada pieza:
 
@@ -431,12 +429,12 @@ class Tablero:
         movimiento_permitido: bool = pieza_origen.es_movimiento_valido(self, origen, destino)
 
         if not movimiento_permitido:
-            return "Movimiento no válido para esta pieza (" + pieza_origen.nombre + ")."
+            return "No es válido para esta pieza (" + pieza_origen.nombre + ")."
 
         #7. Comprobación de que no dejamos al rey propio en jaque.
 
         if self.deja_rey_en_jaque(origen, destino, color_turno):
-            return "Movimiento no válido. El rey quedaría en jaque."
+            return "El rey quedaría en jaque."
 
         #Si el movimiento supera todas las comprobaciones anteriores, se devuelve un texto vacío para indicar que es válido.
         return ""
@@ -569,6 +567,13 @@ class Tablero:
         # Ninguna pieza tiene un movimiento legal.
         return False
 
+
+# __________ Partida: funciones __________
+
+import os
+import csv
+
+
 def guardar_historial(movimientos: list[str], ruta: str) -> None:
     """Guarda la lista de movimientos en un fichero, uno por línea."""
 
@@ -576,9 +581,52 @@ def guardar_historial(movimientos: list[str], ruta: str) -> None:
         for movimiento in movimientos:
             fichero.write(movimiento + "\n")
 
-"""*"""
-historial: list[str] = ["e2 e4", "e7 e5", "g1 f3"]
-guardar_historial(historial, "partida.txt")
+
+def cargar_historial(ruta: str) -> list[str]:
+    """Carga el historial de movimientos desde un fichero, si existe."""
+
+    movimientos: list[str] = []
+    if os.path.exists(ruta):
+        with open(ruta, "r") as fichero:
+            for linea in fichero:
+                movimiento: str = linea.strip()
+                movimientos: list[str] = movimientos + [movimiento]
+
+    return movimientos
+
+
+def exportar_historial_csv(movimientos: list[str], ruta: str) -> None:
+    """Exporta el historial con número, turno y movimiento a un CSV."""
+
+    with open(ruta, "w", newline="") as fichero:
+        escritor = csv.writer(fichero)
+        escritor.writerow(["Número", "turno", "movimiento"])
+        for indice in range(len(movimientos)):
+            numero: int = indice + 1
+            if indice % 2 == 0:
+                turno: str = "blancas"
+            else:
+                turno: str = "negras"
+            escritor.writerow([numero, turno, movimientos[indice]])
+
+
+def reconstruir_tablero(tablero: Tablero, movimientos: list[str]) -> None:
+    """Reconstruye el tablero aplicando los movimientos guardados."""
+
+    for movimiento in movimientos:
+
+        casillas: tuple[str, str] | None = procesar_movimiento(movimiento)
+
+        if casillas is not None:
+
+            casilla_origen: str = casillas[0]
+            casilla_destino: str = casillas[1]
+
+            origen: tuple[int, int] = convertir_casilla_a_coordenadas(casilla_origen)
+            destino: tuple[int, int] = convertir_casilla_a_coordenadas(casilla_destino)
+
+            tablero.mover_pieza(origen, destino)
+
 
 def gestionar_turno(tablero: Tablero, color_turno: str,  historial: list[str]) -> str:
     """Pide un movimiento y devuelve el resultado del turno."""
@@ -604,7 +652,9 @@ def gestionar_turno(tablero: Tablero, color_turno: str,  historial: list[str]) -
     motivo: str = tablero.validar_movimiento(texto, color_turno)
 
     if motivo != "":
+        print()
         print("Movimiento rechazado:", motivo)
+        print()
         return "invalido"
 
     #Si llega aquí, el movimiento es válido.
@@ -665,14 +715,36 @@ def comprobar_estado_partida(tablero: Tablero, color: str) -> bool:
 def jugar_partida() -> None:
     """Gestiona los turnos y el final de la partida."""
 
-    # ________ Tablero y estado inicial ________
+    # ________ Tablero e historial inicial ________
 
     tablero: Tablero = Tablero()
+    historial: list[str] = []
+
+    # ________ Elegir partida nueva o cargar una guardada ________
+
+    opcion: str = input("¿Quieres cargar una partida guardada? (Sí/No): ").strip().lower()
+
+    if opcion == "sí" or opcion == "si":                #"Sí", "SÍ", "sí" o "Si" serán reconocidas por el programa.
+        historial = cargar_historial("partida.txt")
+
+        if len(historial) > 0:
+            reconstruir_tablero(tablero, historial)
+            print()
+            print("Partida cargada correctamente.")
+        else:                                                              #"No" comenzará una partida nueva.
+            print("No hay una partida guardada. Se inicia una nueva.")
+
+    # ________ Mostrar tablero ________
+
+    print()
     tablero.imprimir_tablero()
 
-    estado: str = "turno_blancas"       #El estado inicial de una partida nueva siempre es "turno_blancas".
+    # ________ Recuperar el turno ________
 
-    historial: list[str] = []
+    if len(historial) % 2 == 0:         #Comprueba si el número de movimientos es par.
+        estado: str = "turno_blancas"
+    else:
+        estado = "turno_negras"
 
     while estado != "fin_partida":
 
@@ -680,25 +752,35 @@ def jugar_partida() -> None:
         if estado == "turno_blancas":
             resultado: str = gestionar_turno(tablero, "blanca", historial)     #Muestra de quién es el turno y pide una orden.
 
-            if resultado == "salir":        #Se cambia el estado a "salir" y el bucle termina.
+            if resultado == "salir":
                 estado = "fin_partida"
+
+            elif resultado == "exportar":
+                exportar_historial_csv(historial, "partida.csv")
+                print("Historial exportado a partida.csv.")
+
             elif resultado == "valido":    
                 partida_terminada: bool = comprobar_estado_partida(tablero, "negra")
+
                 if partida_terminada:
                     estado = "fin_partida"
                 else: 
                     estado = "turno_negras"     #Se cambia el estado a "turno_negras".
 
         # ________ Turno de las negras ________
-            #Este bloque funciona como el anterior, y después de una consulta válida devuelve el turno a las blancas.
-
         elif estado == "turno_negras":
             resultado = gestionar_turno(tablero, "negra", historial)
 
             if resultado == "salir":
                 estado = "fin_partida"
+
+            elif resultado == "exportar":
+                exportar_historial_csv(historial, "partida.csv")
+                print("Historial exportado a partida.csv.")
+
             elif resultado == "valido":
                 partida_terminada = comprobar_estado_partida(tablero, "blanca")
+
                 if partida_terminada:
                     estado = "fin_partida"
                 else:
