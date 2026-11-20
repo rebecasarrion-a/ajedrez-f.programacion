@@ -452,7 +452,7 @@ class Tablero:
         #7. Comprobación de que no dejamos al rey propio en jaque.
 
         if self.deja_rey_en_jaque(origen, destino, color_turno):
-            return "El rey quedaría en jaque."
+            return "¡Tu rey rey quedaría en jaque!"
 
         #Si el movimiento supera todas las comprobaciones anteriores, se devuelve un texto vacío para indicar que es válido.
         return ""
@@ -739,7 +739,11 @@ def comprobar_estado_partida(tablero: Tablero, color: str) -> bool:
         print("¡Jaque al rey de las " + color + "s!")
 
     elif not tiene_movimientos:
-        print("¡Rey ahogado!")
+        if color == "blanca":
+            print("¡Rey blanco ahogado!")
+        else:
+            print("¡Rey negro ahogado!")
+
         print("La partida termina en tablas.")
         return True
 
@@ -768,17 +772,29 @@ def jugar_partida() -> None:
             resultado_carga: str = reconstruir_tablero(tablero, historial)
     
             if resultado_carga == "invalida":
+                print()
                 print("El archivo guardado no es válido. Se inicia una partida nueva.")
                 tablero = Tablero()
                 historial = []
             elif resultado_carga == "terminada":
+                print()
                 print("La partida guardada ya había terminado. Se inicia una partida nueva.")
                 tablero = Tablero()
                 historial = []
             else:
+                print()
                 print("Partida cargada correctamente.")
 
-    # ________ Mostrar tablero ________
+    # ________ Mostrar tablero y cabecera ________
+
+    # ________ Mensaje de inicio y mostrar tablero ________
+
+    print()
+
+    if len(historial) == 0:
+        print("Comienza una nueva partida. ¡Mucha suerte!")
+    else:
+        print("¡Que continúe la partida!")
 
     print()
     tablero.imprimir_tablero()
@@ -800,8 +816,12 @@ def jugar_partida() -> None:
 
             elif resultado == "exportar":
                 exportar_historial_csv(historial, "partida.csv")
+                print("________________________________")
+                print()
                 print("Historial exportado a partida.csv.")
-
+                print("________________________________")
+                print()
+                
             elif resultado == "valido":    
                 partida_terminada: bool = comprobar_estado_partida(tablero, "negra")
 
@@ -819,7 +839,11 @@ def jugar_partida() -> None:
 
             elif resultado == "exportar":
                 exportar_historial_csv(historial, "partida.csv")
+                print("________________________________")
+                print()
                 print("Historial exportado a partida.csv.")
+                print("________________________________")
+                print()
 
             elif resultado == "valido":
                 partida_terminada = comprobar_estado_partida(tablero, "blanca")
