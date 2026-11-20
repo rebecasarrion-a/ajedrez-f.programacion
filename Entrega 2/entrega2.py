@@ -569,8 +569,18 @@ class Tablero:
         # Ninguna pieza tiene un movimiento legal.
         return False
 
+def guardar_historial(movimientos: list[str], ruta: str) -> None:
+    """Guarda la lista de movimientos en un fichero, uno por línea."""
 
-def gestionar_turno(tablero: Tablero, color_turno: str) -> str:
+    with open(ruta, "w") as fichero:
+        for movimiento in movimientos:
+            fichero.write(movimiento + "\n")
+
+"""*"""
+historial: list[str] = ["e2 e4", "e7 e5", "g1 f3"]
+guardar_historial(historial, "partida.txt")
+
+def gestionar_turno(tablero: Tablero, color_turno: str,  historial: list[str]) -> str:
     """Pide un movimiento y devuelve el resultado del turno."""
 
     #Muestra de quién es el turno:
@@ -611,9 +621,16 @@ def gestionar_turno(tablero: Tablero, color_turno: str) -> str:
     #Se aplica el movimiento ya validado.
     tablero.mover_pieza(origen, destino)
 
-    print("Movimiento aplicado:", casilla_origen, "->", casilla_destino)
+    historial.append(casilla_origen + " " + casilla_destino)
+    guardar_historial(historial, "partida.txt")
 
-    tablero.imprimir_tablero()
+    print("Movimiento aplicado:", casilla_origen, "->", casilla_destino)
+    
+    print()
+    print("________________________________")   #Línea separadora antes del nuevo tablero.
+    print()
+
+    tablero.imprimir_tablero()  #Se imprime el tablero con el nuevo movimiento.
 
     return "valido"
 
@@ -655,11 +672,13 @@ def jugar_partida() -> None:
 
     estado: str = "turno_blancas"       #El estado inicial de una partida nueva siempre es "turno_blancas".
 
+    historial: list[str] = []
+
     while estado != "fin_partida":
 
         # ________ Turno de las blancas ________
         if estado == "turno_blancas":
-            resultado: str = gestionar_turno(tablero, "blanca")     #Muestra de quién es el turno y pide una orden.
+            resultado: str = gestionar_turno(tablero, "blanca", historial)     #Muestra de quién es el turno y pide una orden.
 
             if resultado == "salir":        #Se cambia el estado a "salir" y el bucle termina.
                 estado = "fin_partida"
@@ -674,7 +693,7 @@ def jugar_partida() -> None:
             #Este bloque funciona como el anterior, y después de una consulta válida devuelve el turno a las blancas.
 
         elif estado == "turno_negras":
-            resultado = gestionar_turno(tablero, "negra")
+            resultado = gestionar_turno(tablero, "negra", historial)
 
             if resultado == "salir":
                 estado = "fin_partida"
@@ -687,7 +706,12 @@ def jugar_partida() -> None:
 
         # Si el movimiento es inválido, no cambia el estado.
 
+    print()
+    print("________________________________")
+    print()
     print("Fin de la partida.")
+    print()
+
 
 if __name__ == "__main__":
     jugar_partida()
