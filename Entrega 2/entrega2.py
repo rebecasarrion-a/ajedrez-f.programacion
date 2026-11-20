@@ -137,6 +137,7 @@ class Rey(Pieza):
             return True     #Si las distancias son 1, el movimiento es válido.
 
 class Peón(Pieza):
+    """Se mueve una casilla hacia delante (dos si es primer movimiento) y captura una casilla en diagonal."""
 
     def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """Se mueve una casilla, o dos si es el primer movimiento.
@@ -202,15 +203,12 @@ class Tablero:
     """Guarda la posición de las piezas y las operaciones sobre el tablero."""
 
     def __init__(self) -> None:
-
-        #Construye una lista de listas que es una matriz de 8x8 vacía.
-        self.casillas: list[list[Pieza | None]] = [
+        self.casillas: list[list[Pieza | None]] = [         #Construye una lista de listas que es una matriz de 8x8 vacía.
             [None for _ in range(TAMANO_TABLERO)]
             for _ in range(TAMANO_TABLERO)
         ]
 
-        #Rellena la matriz con las piezas en sus posiciones iniciales.
-        self.colocar_posicion_inicial()
+        self.colocar_posicion_inicial()                     #La rellena con las piezas en sus posiciones iniciales.
 
 # _____ Métodos _____
 
@@ -324,11 +322,30 @@ class Tablero:
 
     #El movimiento se realiza correctamente (return True), si:
     
-        #La casilla de destino está ocupada por una pieza, esta es sustituida (*CAPTURA PROVISIONAL).
+        #Si hay una pieza rival en el destino, se captura al sustituirla.
         self.casillas[fila_destino_tablero][columna_destino] = pieza
-        self.casillas[fila_origen_tablero][columna_origen] = None   #Y se vacía la casilla de origen.
+        self.casillas[fila_origen_tablero][columna_origen] = None       #Y se vacía la casilla de origen.
+
+         # ________ Coronación automática del peón ________
+
+        if pieza.nombre == "peón":
+
+            # Peón blanco: llega a la fila 8.
+            if pieza.color == "blanca" and destino[0] == 7:
+                self.casillas[fila_destino_tablero][columna_destino] = Dama(
+                    "blanca", "♕", "dama"
+                )
+                print("¡El peón blanco ha coronado a dama!")
+
+            # Peón negro: llega a la fila 1.
+            elif pieza.color == "negra" and destino[0] == 0:
+                self.casillas[fila_destino_tablero][columna_destino] = Dama(
+                    "negra", "♛", "dama"
+                )
+                print("¡El peón negro ha coronado a dama!")
 
         return True
+
 
 
     def camino_libre(self, origen: tuple[int, int], destino: tuple[int, int]) -> bool:
@@ -377,6 +394,7 @@ class Tablero:
         """Comprueba si un movimiento es válido para el jugador al que le corresponde el turno y explica el primer motivo de rechazo."""
 
         #1. Comprobación del formato con procesar_movimiento:
+        
         movimiento: tuple[str, str] | None = procesar_movimiento(texto)
 
         if movimiento is None:
@@ -590,42 +608,62 @@ def cargar_historial(ruta: str) -> list[str]:
         with open(ruta, "r") as fichero:
             for linea in fichero:
                 movimiento: str = linea.strip()
-                movimientos: list[str] = movimientos + [movimiento]
+                if movimiento != "":
+                    movimientos = movimientos + [movimiento]
 
     return movimientos
 
 
 def exportar_historial_csv(movimientos: list[str], ruta: str) -> None:
-    """Exporta el historial con número, turno y movimiento a un CSV."""
+    """Exporta el historial con número, turno, origen y destino de cada movimiento a CSV."""
 
     with open(ruta, "w", newline="") as fichero:
         escritor = csv.writer(fichero)
-        escritor.writerow(["Número", "turno", "movimiento"])
+        escritor.writerow(["numero", "turno", "origen", "destino"])
+
         for indice in range(len(movimientos)):
             numero: int = indice + 1
             if indice % 2 == 0:
                 turno: str = "blancas"
             else:
                 turno: str = "negras"
-            escritor.writerow([numero, turno, movimientos[indice]])
+
+            origen, destino = movimientos[indice].split()    
+            escritor.writerow([numero, turno, origen, destino])
 
 
-def reconstruir_tablero(tablero: Tablero, movimientos: list[str]) -> None:
-    """Reconstruye el tablero aplicando los movimientos guardados."""
+def reconstruir_tablero(tablero: Tablero, movimientos: list[str]) -> str:
+    """Reconstruye el tablero cuando valida el historial; indica si es válido, inválido o terminado.."""
 
-    for movimiento in movimientos:
+    for indice in range(len(movimientos)):
+        movimiento: str = movimientos[indice]
+
+        if indice % 2 == 0:
+            color_turno: str = "blanca"
+            color_siguiente: str = "negra"
+        else:
+            color_turno = "negra"
+            color_siguiente = "blanca"
+
+        #Cada movimiento debe respetar las reglas y el turno correspondiente.
+        if tablero.validar_movimiento(movimiento, color_turno) != "":
+            return "invalida"
 
         casillas: tuple[str, str] | None = procesar_movimiento(movimiento)
+        if casillas is None:
+            return "invalida"
 
-        if casillas is not None:
+        origen: tuple[int, int] = convertir_casilla_a_coordenadas(casillas[0])
+        destino: tuple[int, int] = convertir_casilla_a_coordenadas(casillas[1])
+        tablero.mover_pieza(origen, destino)
 
-            casilla_origen: str = casillas[0]
-            casilla_destino: str = casillas[1]
+        #Si la partida acabó, no puede contener más movimientos.
+        if not tablero.tiene_movimientos_validos(color_siguiente):
+            if indice != len(movimientos) - 1:
+                return "invalida"
+            return "terminada"
 
-            origen: tuple[int, int] = convertir_casilla_a_coordenadas(casilla_origen)
-            destino: tuple[int, int] = convertir_casilla_a_coordenadas(casilla_destino)
-
-            tablero.mover_pieza(origen, destino)
+    return "valida"
 
 
 def gestionar_turno(tablero: Tablero, color_turno: str,  historial: list[str]) -> str:
@@ -722,17 +760,23 @@ def jugar_partida() -> None:
 
     # ________ Elegir partida nueva o cargar una guardada ________
 
-    opcion: str = input("¿Quieres cargar una partida guardada? (Sí/No): ").strip().lower()
-
-    if opcion == "sí" or opcion == "si":                #"Sí", "SÍ", "sí" o "Si" serán reconocidas por el programa.
-        historial = cargar_historial("partida.txt")
-
-        if len(historial) > 0:
-            reconstruir_tablero(tablero, historial)
-            print()
-            print("Partida cargada correctamente.")
-        else:                                                              #"No" comenzará una partida nueva.
-            print("No hay una partida guardada. Se inicia una nueva.")
+    if os.path.exists("partida.txt"):
+        opcion: str = input("¿Quieres cargar una partida guardada? (s/n): ").strip().lower()
+    
+        if opcion == "s" or opcion == "si" or opcion == "sí":
+            historial = cargar_historial("partida.txt")
+            resultado_carga: str = reconstruir_tablero(tablero, historial)
+    
+            if resultado_carga == "invalida":
+                print("El archivo guardado no es válido. Se inicia una partida nueva.")
+                tablero = Tablero()
+                historial = []
+            elif resultado_carga == "terminada":
+                print("La partida guardada ya había terminado. Se inicia una partida nueva.")
+                tablero = Tablero()
+                historial = []
+            else:
+                print("Partida cargada correctamente.")
 
     # ________ Mostrar tablero ________
 
@@ -741,9 +785,8 @@ def jugar_partida() -> None:
 
     # ________ Recuperar el turno ________
 
-    if len(historial) % 2 == 0:         #Comprueba si el número de movimientos es par.
-        estado: str = "turno_blancas"
-    else:
+    estado: str = "turno_blancas"  #Una partida nueva siempre empieza con blancas.
+    if len(historial) % 2 != 0:
         estado = "turno_negras"
 
     while estado != "fin_partida":
@@ -791,7 +834,7 @@ def jugar_partida() -> None:
     print()
     print("________________________________")
     print()
-    print("Fin de la partida.")
+    print("Fin de la partida. ¡Hasta la próxima!")
     print()
 
 
