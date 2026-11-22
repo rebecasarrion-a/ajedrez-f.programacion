@@ -711,19 +711,17 @@ def comprobar_estado_partida(tablero: Tablero, color: str) -> bool:
     en_jaque: bool = tablero.esta_en_jaque(color)
     tiene_movimientos: bool = tablero.tiene_movimientos_validos(color)
 
-    # Para distinguir los tres casos se comprueba si su rey está atacado
-        # y si dispone de algún movimiento legal.
-    if en_jaque:
-        if not tiene_movimientos:
+    if en_jaque:                                            #Rey atacado:
+        if not tiene_movimientos:                           #- Sin movimientos: jaque mate; gana el rival.
             print("¡Jaque mate!")
             if color == "blanca":
                 print("Han ganado las negras.")
             else:
                 print("Han ganado las blancas.")
             return True
-        print("¡Jaque al rey de las " + color + "s!")
+        print("¡Jaque al rey de las " + color + "s!")       #Si puede defenderse, la partida continúa, pero se avisa del jaque.
 
-    elif not tiene_movimientos:
+    elif not tiene_movimientos:                             #Sin jaque y sin movimientos legales: rey ahogado, que son tablas.
         if color == "blanca":
             print("¡Rey blanco ahogado!")
         else:
@@ -732,7 +730,7 @@ def comprobar_estado_partida(tablero: Tablero, color: str) -> bool:
         print("La partida termina en tablas.")
         return True
 
-    return False
+    return False    #Si hay movimientos disponibles, la partida todavía no ha terminado.
 
 
 # __________ Bucle principal: máquina de estados __________
@@ -744,9 +742,10 @@ def jugar_partida() -> None:
 
     # ________ Tablero e historial inicial ________
 
+    #Se parte de un tablero nuevo y de una lista de movimientos vacía.
     tablero: Tablero = Tablero()
     historial: list[str] = []
-
+    
     # _____ Elegir partida nueva o cargar una guardada _____
 
     #Si hay una partida guardada, se ofrece recuperarla antes de empezar.
@@ -754,9 +753,10 @@ def jugar_partida() -> None:
         opcion: str = input("¿Quieres cargar una partida guardada? (s/n): ").strip().lower()
     
         if opcion == "s" or opcion == "si" or opcion == "sí":
-            historial = cargar_historial("partida.txt")
+            historial = cargar_historial("partida.txt")                      #Se leen los movimientos guardados y se reproducen en orden.
             resultado_carga: str = reconstruir_tablero(tablero, historial)
-    
+
+            #Un historial ilegal o una partida ya finalizada no se continúa:se crea otro tablero y se borra el historial recuperado.
             if resultado_carga == "invalida":
                 print()
                 print("El archivo guardado no es válido. Se inicia una partida nueva.")
@@ -781,16 +781,15 @@ def jugar_partida() -> None:
         print("¡Que continúe la partida!")
 
     print()
-    tablero.imprimir_tablero()
+    tablero.imprimir_tablero()      #Se enseña la posición inicial o la reconstruida desde el archivo.
 
     # _____ Recuperar el turno _____
 
-    estado: str = "turno_blancas"   #Las blancas empiezan; un historial impar indica que siguen las negras.
-    #Cada movimiento válido cambia de turno; la paridad permite recuperarlo.
-    if len(historial) % 2 != 0:
+    estado: str = "turno_blancas"   #Las blancas empiezan.
+    if len(historial) % 2 != 0:     #Un historial impar indica que siguen las negras (cada movimiento válido cambia de turno; la paridad permite recuperarlo).
         estado = "turno_negras"
 
-    #El bucle continúa hasta recibir "salir" o detectar el final de la partida.
+    #El bucle continúa hasta detectar el final de la partida.
     while estado != "fin_partida":
 
         # ________ Turno de las blancas ________
@@ -809,14 +808,16 @@ def jugar_partida() -> None:
                 print()
                 
             elif resultado == "valido":    
-                partida_terminada: bool = comprobar_estado_partida(tablero, "negra")
+                partida_terminada: bool = comprobar_estado_partida(tablero, "negra")     #Movimiento válido obliga a comprobar la situación del rival.
 
                 if partida_terminada:
                     estado = "fin_partida"
                 else: 
-                    estado = "turno_negras"     #Se cambia el estado a "turno_negras".
+                    estado = "turno_negras"     #Se cambia el estado a "turno_negras" después de un movimiento válido.
 
         # ________ Turno de las negras ________
+        #La misma lógica se aplica a las negras.
+
         elif estado == "turno_negras":
             resultado = gestionar_turno(tablero, "negra", historial)
 
@@ -839,12 +840,12 @@ def jugar_partida() -> None:
                 else:
                     estado = "turno_blancas"
 
-        #Un movimiento rechazado mantiene el turno del mismo jugador.
+        #Si gestionar_turno devuelve "invalido", no se entra en ninguna rama anterior: el estado no cambia y vuelve a jugar el mismo color.
 
     print()
     print("________________________________")
     print()
-    print("Fin de la partida. ¡Hasta la próxima!")
+    print("Fin de la partida. ¡Hasta la próxima!")      #Mensaje impreso al acabar la partida.
     print()
 
 
