@@ -673,9 +673,9 @@ def gestionar_turno(tablero: Tablero, color_turno: str,  historial: list[str]) -
 
     #Muestra de quién es el turno:
     if color_turno == "blanca":
-        print("Es el turno de las blancas.")
+        print("Turno de las blancas")
     else:
-        print("Es el turno de las negras.")
+        print("Turno de las negras")
 
     #Se pide el movimiento o una orden especial.
     texto: str = input("Introduce un movimiento (origen destino), 'exportar' o 'salir': ")
@@ -739,7 +739,7 @@ def comprobar_estado_partida(tablero: Tablero, color: str) -> bool:
             else:
                 print("Ganan las blancas.")
             return True
-        print("¡Jaque al rey de las " + color + "s!")       #- Si puede defenderse, la partida continúa, pero se avisa del jaque.
+        print("Jaque a las " + color + "s.")       #- Si puede defenderse, la partida continúa, pero se avisa del jaque.
 
     elif not tiene_movimientos:                             #Sin jaque y sin movimientos legales: rey ahogado, que son tablas.
         if color == "blanca":
