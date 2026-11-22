@@ -1,3 +1,12 @@
+"""
+Entrega 2 - Piezas que se mueven
+
+Programa principal de una partida de ajedrez entre
+dos jugadores la consola.
+
+La función jugar_partida() inicia y controla la partida..
+"""
+
 # __________ Constantes del tablero __________
 
 TAMANO_TABLERO: int = 8     #El tablero tiene 8 filas y 8 columnas.
@@ -229,6 +238,10 @@ class Tablero:
             ("rey", "♚"), ("alfil", "♝"), ("caballo", "♞"), ("torre", "♜")
         ]
 
+        #Variables que guardan el nombre y el símbolo de cada pieza al recorrer las listas.
+        nombre: str
+        simbolo: str
+
         #Piezas negras en primera fila.
         for columna in range(TAMANO_TABLERO):
             nombre, simbolo = piezas_negras[columna]
@@ -277,7 +290,7 @@ class Tablero:
             print(8 - fila, end=" ")
 
             for columna in range(TAMANO_TABLERO):
-                pieza = self.casillas[fila][columna]
+                pieza: Pieza | None = self.casillas[fila][columna]      #Una casilla puede contener un objeto Pieza o estar vacía.
 
                 if pieza is None:
                     print("·", end=" ")
@@ -430,7 +443,7 @@ class Tablero:
         #7. Comprobación de no dejar al rey propio en jaque.
 
         if self.deja_rey_en_jaque(origen, destino, color_turno):
-            return "¡Tu rey rey quedaría en jaque!"
+            return "Ese movimiento deja a tu propio rey en jaque."
 
         #Una cadena vacía indica que no hay motivo para rechazar el movimiento.
         return ""
@@ -570,8 +583,9 @@ class Tablero:
 
 # __________ Partida: funciones __________
 
-import os
-import csv
+
+import os       #Permite comprobar si existe el archivo de una partida guardada.
+import csv      #Permite exportar el historial de movimientos a un archivo CSV.
 
 
 def guardar_historial(movimientos: list[str], ruta: str) -> None:
@@ -599,19 +613,25 @@ def cargar_historial(ruta: str) -> list[str]:
 def exportar_historial_csv(movimientos: list[str], ruta: str) -> None:
     """Exporta el historial con número, turno, origen y destino de cada movimiento a CSV."""
 
-    with open(ruta, "w", newline="") as fichero:        #newline="" evita líneas vacías adicionales al escribir el CSV.
-        escritor = csv.writer(fichero)
-        escritor.writerow(["numero", "turno", "origen", "destino"])     #Primera fila: nombres de las columnas.
+    #Se abre el archivo CSV para en modo escritura. Si ya existe, se sustituye su contenido.
+    with open(ruta, "w", newline="") as fichero:                        #newline="" evita líneas vacías adicionales entre los movimientos.
+        escritor = csv.writer(fichero)                                  #Se prepara el archivo para escribir los datos organizados.
+        escritor.writerow(["numero", "turno", "origen", "destino"])     #Se escribe primera fila: cabecera con el nombre de las cuatro columnas.
 
+        #Se recorre el historial para exportar cada movimiento en una fila diferente.
         for indice in range(len(movimientos)):
-            numero: int = indice + 1
+            numero: int = indice + 1            #Se suma 1 al índice para numerar los movimientos desde 1 y las listas desde 0.
             if indice % 2 == 0:
-                turno: str = "blancas"
+                turno: str = "blancas"          #Los impares corresponden a las blancas.
             else:
-                turno: str = "negras"
+                turno: str = "negras"           #Los pares corresponden a las negras.
 
-            origen, destino = movimientos[indice].split()    
-            escritor.writerow([numero, turno, origen, destino])
+            #Variables que guardan las casillas de origen y destino de cada movimiento.
+            origen: str
+            destino: str
+
+            origen, destino = movimientos[indice].split()           #Se obtiene el movimiento del historial y se separa (.split()).
+            escritor.writerow([numero, turno, origen, destino])     #Se escribe una fila con los cuatro datos del movimiento.
 
 
 def reconstruir_tablero(tablero: Tablero, movimientos: list[str]) -> str:
@@ -713,13 +733,13 @@ def comprobar_estado_partida(tablero: Tablero, color: str) -> bool:
 
     if en_jaque:                                            #Rey atacado:
         if not tiene_movimientos:                           #- Sin movimientos: jaque mate; gana el rival.
-            print("¡Jaque mate!")
+            print("Jaque mate.")
             if color == "blanca":
-                print("Han ganado las negras.")
+                print("Ganan las negras.")
             else:
-                print("Han ganado las blancas.")
+                print("Ganan las blancas.")
             return True
-        print("¡Jaque al rey de las " + color + "s!")       #Si puede defenderse, la partida continúa, pero se avisa del jaque.
+        print("¡Jaque al rey de las " + color + "s!")       #- Si puede defenderse, la partida continúa, pero se avisa del jaque.
 
     elif not tiene_movimientos:                             #Sin jaque y sin movimientos legales: rey ahogado, que son tablas.
         if color == "blanca":
@@ -786,7 +806,7 @@ def jugar_partida() -> None:
     # _____ Recuperar el turno _____
 
     estado: str = "turno_blancas"   #Las blancas empiezan.
-    if len(historial) % 2 != 0:     #Un historial impar indica que siguen las negras (cada movimiento válido cambia de turno; la paridad permite recuperarlo).
+    if len(historial) % 2 != 0:     #Un historial impar indica que siguen las negras.
         estado = "turno_negras"
 
     #El bucle continúa hasta detectar el final de la partida.
@@ -848,6 +868,6 @@ def jugar_partida() -> None:
     print("Fin de la partida. ¡Hasta la próxima!")      #Mensaje impreso al acabar la partida.
     print()
 
-
+#La partida comienza cuando se ejecuta directamente el archivo Python.
 if __name__ == "__main__":
     jugar_partida()
