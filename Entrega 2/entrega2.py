@@ -1,8 +1,8 @@
 # __________ Constantes del tablero __________
 
-TAMANO_TABLERO: int = 8     #El tablero de ajedrez tiene siempre 8 filas y 8 columnas.
-LETRAS_VALIDAS: str = "abcdefgh"    #Las columnas del tablero se identifican con las letras de la 'a' a la 'h'.
-NUMEROS_VALIDOS: str = "12345678"    #Las filas del tablero se identifican con los números de la '1' a la '8'.
+TAMANO_TABLERO: int = 8     #El tablero tiene 8 filas y 8 columnas.
+LETRAS_VALIDAS: str = "abcdefgh"    #Las columnas se identifican con las letras de la 'a' a la 'h'.
+NUMEROS_VALIDOS: str = "12345678"    #Las filas se identifican con los números de la '1' a la '8'.
 CASILLA_VACIA: str = "·"    #Símbolo que representa una casilla vacía en el tablero.
 
 
@@ -10,11 +10,11 @@ CASILLA_VACIA: str = "·"    #Símbolo que representa una casilla vacía en el t
 
 # ________ Representación de una casilla ________
 
-def convertir_casilla_a_coordenadas(casilla: str) -> tuple[int, int]:
+def convertir_casilla(casilla: str) -> tuple[int, int]:
     """Convierte una casilla "letra número" en una tupla (fila, columna)."""
 
-    fila: int = int(casilla[1]) - 1     #Convierte el "número" en un índice de fila. Se resta 1 para adaptar la numeración del ajedrez (1-8) a los índices internos (0-7).
-    columna: int = LETRAS_VALIDAS.index(casilla[0])     #Buscando la "letra" en LETRAS_VALIDAS, index() devuelve su posición empezando desde 0, esa es la columna.
+    fila: int = int(casilla[1]) - 1     #Se resta 1 al número de la casilla para adaptar la numeración del ajedrez (1-8) a los índices internos (0-7).
+    columna: int = LETRAS_VALIDAS.index(casilla[0])     #index() busca la letra y devuelve su posición dentro de LETRAS_VALIDAS (0-7).
 
     return fila, columna    #Devuelve una coordenada (fila, columna).
 
@@ -26,34 +26,36 @@ def es_casilla_valida(casilla: str) -> bool:
     if len(casilla) != 2:   #Debe tener exactamente dos caracteres.
         return False
 
-    if casilla[0] not in LETRAS_VALIDAS:    #El primero, una letra de LETRAS_VALIDAS.
+    if casilla[0] not in LETRAS_VALIDAS:    #El primero, una letra (columna) de LETRAS_VALIDAS.
         return False
 
-    if casilla[1] not in NUMEROS_VALIDOS:   #El segundo, un número de NUMEROS_VALIDAS.
+    if casilla[1] not in NUMEROS_VALIDOS:   #El segundo, un número (fila) de NUMEROS_VALIDAS.
         return False
 
-    return True     #Cuando supera todas las condiciones, es válida.
+    return True     #Si no se ha rechazado antes, la casilla es válida.
 
 # ________ Formato de un movimiento ________
 
 def procesar_movimiento(texto: str) -> tuple[str, str] | None:
     """Limpia y comprueba la validez del formato de un movimiento introducido."""
 
-    movimiento: str = texto.strip().lower()     #Con el texto introducido: se eliminan espacios sobrantes (strip) y se convierte a minúsculas (lower).
-    partes: list[str] = movimiento.split()      #Separamos el texto origen y el texto destino con espacios (split).
+    #Con el texto introducido:
+    movimiento: str = texto.strip().lower()   #strip() quita espacios al principio y al final; lower() admite letras mayúsculas.
+    partes: list[str] = movimiento.split()    #split() separa las dos casillas, aunque haya varios espacios entre ellas.
 
-    #Un movimiento debe contener exactamente dos casillas.
+    #El movimiento debe contener exactamente dos partes (origen y destino).
     if len(partes) != 2:    
-        return None         #Si no es así, devuelve None.
+        return None         #None indica que el formato no es válido.
 
-    #Se guardan los dos en variables independientes y se comprueba que sean casillas válidas.
+    #Se comprueba por separado que origen y destino sean casillas existentes.
     origen: str = partes[0]
     destino: str = partes[1]
 
     if not es_casilla_valida(origen) or not es_casilla_valida(destino):
         return None
 
-    return origen, destino  #Cuando supera todas las condiciones, devuelve el movimiento en el formato correcto.
+    #Se devuelven las dos casillas ya normalizadas.
+    return origen, destino
 
 
 # __________ Pieza: clase, método y subclases __________
@@ -68,9 +70,9 @@ class Pieza:
 
     def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """True si la pieza puede ir de origen a destino según sus reglas.""" 
-        return False    #Cada subclase lo definirá
+        return False    #Cada subclase definirá este método con sus reglas.
 
-# ________ Subclases: tipos de pieza y definición de movimientos validos ________
+# ________ Subclases: movimientos validos ________
 
 class Torre(Pieza):
     """Se mueve en línea recta por filas o columnas."""
@@ -78,20 +80,22 @@ class Torre(Pieza):
     def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """Siempre que el desplazamiento sea en línea recta y no haya piezas en el camino."""
 
-        if origen[0] != destino[0] and origen[1] != destino[1]:     #Si cambian la fila y la columna al mismo tiempo, es un movimiento diagonal
-            return False                                            #y no está permitido.
+        if origen[0] != destino[0] and origen[1] != destino[1]:     #No puede cambiar de fila y columna a la vez.
+            return False
         
-        return tablero.camino_libre(origen, destino)    #Si se mueve en línea recta, devuelve lo que devuelva el método camino_libre().
-
+        return tablero.camino_libre(origen, destino)    #Se comprueba que el trayecto esté vacío.
+    
 class Caballo(Pieza):
     """Se mueve en forma de L y puede saltar por encima de otras piezas."""
 
     def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """Siempre que el desplazamiento tenga forma de L."""
 
+        #abs() permite medir el desplazamiento sin importar el sentido de este.
         diferencia_filas: int = abs(destino[0] - origen[0])
         diferencia_columnas: int = abs(destino[1] - origen[1])
 
+        #Las dos combinaciones posibles forman la L del caballo.
         if not ((diferencia_filas == 2 and diferencia_columnas == 1) or
                 (diferencia_filas == 1 and diferencia_columnas == 2)):
             return False
@@ -104,11 +108,11 @@ class Alfil(Pieza):
     def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """Siempre que el desplazamiento sea en diagonal y no hay piezas en el camino."""
 
-        #Si la diferencia de filas no coincide con la decolumnas no es la misma, el movimiento no es diagonal y devuelve False.
-        if abs(destino[0] - origen[0]) != abs(destino[1] - origen[1]):     #abs() compara las distancias sin importar la dirección hacia la que se mueve el alfil.
+        #En una diagonal se avanza el mismo número de filas que de columnas.
+        if abs(destino[0] - origen[0]) != abs(destino[1] - origen[1]):     #abs() compara distancias sin importar el sentido.
             return False
-                
-        return tablero.camino_libre(origen, destino)    #Si es la misma, devuelve lo que devuelva el método camino_libre().
+
+        return tablero.camino_libre(origen, destino)    #Se comprueba que la diagonal esté vacía.
 
 class Dama(Pieza):
     """Se mueve en horizontal, vertical o diagonal."""
@@ -123,7 +127,7 @@ class Dama(Pieza):
         if not movimiento_recto and not movimiento_diagonal:
             return False
 
-        return tablero.camino_libre(origen, destino)    #Si se cumplen, devuelve lo que devuelva el método camino_libre().
+        return tablero.camino_libre(origen, destino)    #Si comprueba que el trayecto esté vacío.
 
 class Rey(Pieza):
     """Se mueve una casilla, en cualquier dirección."""
@@ -134,24 +138,24 @@ class Rey(Pieza):
         if abs(destino[0] - origen[0]) > 1 or abs(destino[1] - origen[1]) > 1:
             return False
         else:
-            return True     #Si las distancias son 1, el movimiento es válido.
+            return True     #Si las distancias son 1, el movimiento es permitido.
 
 class Peón(Pieza):
     """Se mueve una casilla hacia delante (dos si es primer movimiento) y captura una casilla en diagonal."""
 
     def es_movimiento_valido(self, tablero: "Tablero", origen: tuple[int, int], destino: tuple[int, int]) -> bool:
-        """Se mueve una casilla, o dos si es el primer movimiento.
-        También puede capturar una pieza rival desplazándose una casilla en diagonal hacia delante."""
+        """Siempre que se desplace una casilla hacia delante, dos si es el primer movimiento, y capture una casilla en diagonal."""
 
-        #Dirección de avance según color.
-        if self.color == "blanca":  #Blancas avanzan aumentando la fila.
+        #Dirección de avance según color:
+
+        if self.color == "blanca":  #Las blancas avanzan hacia números de fila mayores.
             direccion: int = 1
             fila_inicial: int = 1
-        else:                       #Negras avanzan disminuyéndola.
+        else:                       #Las negras avanzan hacia números de fila menores
             direccion = -1
             fila_inicial = 6
 
-        #Calculo de la distancia que se desplaza el peón por filas y columnas.
+        #Se calculan los desplazamientos para distinguir avance y captura.
         diferencia_filas: int = destino[0] - origen[0]
         diferencia_columnas: int = abs(destino[1] - origen[1])
 
@@ -160,7 +164,7 @@ class Peón(Pieza):
         #Consulta de pieza en la casilla de destino.
         pieza_destino: Pieza | None = tablero.casillas[fila_destino_tablero][destino[1]]
 
-        # __ CASO GENERAL: avanzar una casilla hacia delante (el destino tiene que estar vacío) __
+        # __ CASO GENERAL: avanzar una casilla hacia delante (con destino vacío) __
         
         if diferencia_filas == direccion and diferencia_columnas == 0:
             if pieza_destino is None:
@@ -168,7 +172,7 @@ class Peón(Pieza):
             else:
                 return False
 
-        # __ CASO PRIMER MOVIMIENTO: avanzar dos casillas hacia delante (el destino tiene que estar vacío) __
+        # __ CASO PRIMER MOVIMIENTO: avanzar dos casillas hacia delante (con destino vacío) __
         
         if diferencia_filas == 2 * direccion and diferencia_columnas == 0:
             if origen[0] != fila_inicial:   #Solo puede hacerlo si todavía está en su fila inicial.
@@ -187,13 +191,13 @@ class Peón(Pieza):
 
         # __ CASO CAPTURA: solo puede capturar al rival en diagonal __
         
-        if diferencia_filas == direccion and diferencia_columnas == 1:      #Movimiento diagonal (avanza una fila y se desplaza una columna).
-            if pieza_destino is not None and pieza_destino.color != self.color:   #Solo captura si hay una pieza de otro color en el destino.
+        if diferencia_filas == direccion and diferencia_columnas == 1:      
+            if pieza_destino is not None and pieza_destino.color != self.color:   #Solo se permite capturar a una pieza del color rival.
                 return True
             else:
                 return False
 
-        #Si no se cumple ninguno de los tres casos anteriores, el movimiento no está permitido para el peón.
+        #Cualquier otro desplazamiento queda descartado.
         return False
 
 
@@ -203,12 +207,12 @@ class Tablero:
     """Guarda la posición de las piezas y las operaciones sobre el tablero."""
 
     def __init__(self) -> None:
-        self.casillas: list[list[Pieza | None]] = [         #Construye una lista de listas que es una matriz de 8x8 vacía.
+        self.casillas: list[list[Pieza | None]] = [         #Construye una lista de listas: cada lista interior representa una fila y None indica una casilla vacía..
             [None for _ in range(TAMANO_TABLERO)]
             for _ in range(TAMANO_TABLERO)
         ]
 
-        self.colocar_posicion_inicial()                     #La rellena con las piezas en sus posiciones iniciales.
+        self.colocar_posicion_inicial()                     #La rellena con las piezas en su posición inicial.
 
 # _____ Métodos _____
 
@@ -216,25 +220,13 @@ class Tablero:
         """Coloca todas las piezas en sus posiciones iniciales."""
 
         piezas_blancas: list[tuple[str, str]] = [
-            ("torre", "♖"),
-            ("caballo", "♘"),
-            ("alfil", "♗"),
-            ("dama", "♕"),
-            ("rey", "♔"),
-            ("alfil", "♗"),
-            ("caballo", "♘"),
-            ("torre", "♖")
+            ("torre", "♖"), ("caballo", "♘"), ("alfil", "♗"), ("dama", "♕"),
+            ("rey", "♔"), ("alfil", "♗"), ("caballo", "♘"), ("torre", "♖")
         ]
 
         piezas_negras: list[tuple[str, str]] = [
-            ("torre", "♜"),
-            ("caballo", "♞"),
-            ("alfil", "♝"),
-            ("dama", "♛"),
-            ("rey", "♚"),
-            ("alfil", "♝"),
-            ("caballo", "♞"),
-            ("torre", "♜")
+            ("torre", "♜"), ("caballo", "♞"), ("alfil", "♝"), ("dama", "♛"),
+            ("rey", "♚"), ("alfil", "♝"), ("caballo", "♞"), ("torre", "♜")
         ]
 
         #Piezas negras en primera fila.
@@ -292,15 +284,15 @@ class Tablero:
                 else:
                     print(pieza.simbolo, end=" ")
 
-            print()     ##Se muestra la línea completa con el símbolo de cada casilla.
+            print()     #Al terminar cada fila, se pasa a la línea siguiente.
 
-        print()  # Línea en blanco después del tablero.
+        print()  #Línea en blanco después del tablero.
 
 
     def mover_pieza(self, origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """Mueve una pieza desde la casilla de origen hasta la casilla de destino."""
 
-        #Se separa la fila y la columna de las casillas de origen y destino.
+        #Se separa las coordenadas para acceder a las casillas de la matriz.
         fila_origen: int = origen[0]
         columna_origen: int = origen[1]
 
@@ -312,46 +304,40 @@ class Tablero:
         fila_destino_tablero: int = TAMANO_TABLERO - 1 - fila_destino
 
     #El movimiento no se realiza cuando:
-        
-        if origen == destino:       #El origen y el destino son los mismos.
+       
+       #El origen y el destino son los mismos.
+        if origen == destino:
             return False
 
+        #La casilla de origen está vacía.
         pieza: Pieza | None = self.casillas[fila_origen_tablero][columna_origen]
-        if pieza is None:                                                           #La casilla de origen está vacía.
+        if pieza is None:
             return False
 
-    #El movimiento se realiza correctamente (return True), si:
+    #Una vez superadas estas comprobaciones, se actualizan las casillas.
     
-        #Si hay una pieza rival en el destino, se captura al sustituirla.
-        self.casillas[fila_destino_tablero][columna_destino] = pieza
-        self.casillas[fila_origen_tablero][columna_origen] = None       #Y se vacía la casilla de origen.
+        self.casillas[fila_destino_tablero][columna_destino] = pieza    #La pieza del origen sustituye a la del destino.
+        self.casillas[fila_origen_tablero][columna_origen] = None       #Se vacía la casilla de origen.
 
-         # ________ Coronación automática del peón ________
+         # _____ Coronación automática del peón _____
 
-        if pieza.nombre == "peón":
+        if pieza.nombre == "peón":      #Si la pieza movida es un peón:
 
-            # Peón blanco: llega a la fila 8.
-            if pieza.color == "blanca" and destino[0] == 7:
-                self.casillas[fila_destino_tablero][columna_destino] = Dama(
-                    "blanca", "♕", "dama"
-                )
+            if pieza.color == "blanca" and destino[0] == 7:                                             #Si es blanco y llega a la fila 8,
+                self.casillas[fila_destino_tablero][columna_destino] = Dama("blanca", "♕", "dama")     #se sustituye automáticamente por una dama del mismo color.
                 print("¡El peón blanco ha coronado a dama!")
 
-            # Peón negro: llega a la fila 1.
-            elif pieza.color == "negra" and destino[0] == 0:
-                self.casillas[fila_destino_tablero][columna_destino] = Dama(
-                    "negra", "♛", "dama"
-                )
+            elif pieza.color == "negra" and destino[0] == 0:                                            #Si es negro y llega a la fila 1,
+                self.casillas[fila_destino_tablero][columna_destino] = Dama("negra", "♛", "dama")      #se sustituye automáticamente por una dama del mismo color.
                 print("¡El peón negro ha coronado a dama!")
 
         return True
 
 
-
     def camino_libre(self, origen: tuple[int, int], destino: tuple[int, int]) -> bool:
         """Comprueba si las casillas situadas entre el origen y el destino están vacías."""
 
-        #El valor de las diferencias entre filas indica el sentido del desplazamiento por ellas.
+        #El valor de las diferencias entre filas indica que:
         diferencia_filas: int = destino[0] - origen[0]
         if diferencia_filas > 0:    
             paso_fila: int = 1        #Se avanza de fila en fila hacia arriba.
@@ -360,7 +346,7 @@ class Tablero:
         else:
             paso_fila: int = 0        #No se cambia de fila.
 
-        #El valor de las diferencias entre columnas indica el sentido del desplazamiento por ellas.
+        #El valor de las diferencias entre columnas indica que:
         diferencia_columnas: int = destino[1] - origen[1]
         if diferencia_columnas > 0:       
             paso_columna: int = 1           #Se avanza de columna en columna hacia la derecha.
@@ -373,28 +359,27 @@ class Tablero:
         fila_actual: int = origen[0] + paso_fila
         columna_actual: int = origen[1] + paso_columna
 
-        #Se recorren las casillas intermedias en un bucle while, sin comprobar el destino (puede haber un rival a capturar).
-        while (fila_actual, columna_actual) != destino:
+        while (fila_actual, columna_actual) != destino:     #El bucle revisa solo las casillas intermedias: el destino puede contener una pieza rival.
 
             fila_tablero: int = TAMANO_TABLERO - 1 - fila_actual    #Conversión de la fila al índice de la matriz.
             
-            #Consulta de pieza en la casilla a comprobar:
+            #Se consulta si la casilla intermedia está ocupada.
             pieza: Pieza | None = self.casillas[fila_tablero][columna_actual]
             if pieza is not None:
-                return False             #Si hay una, termina el método.
+                return False             #Si hay una pieza, termina el método.
 
             #Si está vacía, avanza a la siguiente.
             fila_actual = fila_actual + paso_fila           
             columna_actual = columna_actual + paso_columna
 
-        return True     #El método devuelve True si no han habido piezas en el camino.
+        #Si se llega al destino sin encontrar obstáculos, el camino está libre.
+        return True
 
 
     def validar_movimiento(self, texto: str, color_turno: str) -> str:
         """Comprueba si un movimiento es válido para el jugador al que le corresponde el turno y explica el primer motivo de rechazo."""
 
-        #1. Comprobación del formato con procesar_movimiento:
-        
+        #1. Comprobación del formato:
         movimiento: tuple[str, str] | None = procesar_movimiento(texto)
 
         if movimiento is None:
@@ -404,16 +389,14 @@ class Tablero:
         casilla_origen: str = movimiento[0]
         casilla_destino: str = movimiento[1]
             #Convertimos ambas casillas a coordenadas (fila, columna).
-        origen: tuple[int, int] = convertir_casilla_a_coordenadas(casilla_origen)
-        destino: tuple[int, int] = convertir_casilla_a_coordenadas(casilla_destino)
+        origen: tuple[int, int] = convertir_casilla(casilla_origen)
+        destino: tuple[int, int] = convertir_casilla(casilla_destino)
 
         #2. Comprobación de origen y destino iguales:
-
         if origen == destino:
             return "El origen y el destino son iguales. La pieza no se mueve."
 
         #3. Comprobación de que hay una pieza en el origen:
-
         fila_origen_tablero: int = TAMANO_TABLERO - 1 - origen[0]   #Conversión de la fila al índice de la matriz.
 
         pieza_origen: Pieza | None = self.casillas[fila_origen_tablero][origen[1]]
@@ -422,26 +405,21 @@ class Tablero:
             return "No hay ninguna pieza en la casilla de origen."
 
         #4. Comprobación del color del turno:
-
-        if pieza_origen.color != color_turno:                                           #Solo se permite mover piezas del jugador al que le toca jugar.
+        if pieza_origen.color != color_turno:                               #Solo se permite mover piezas del jugador en turno.
             return "No es tu turno, es el de las " + color_turno + "s."
 
-        #5. Comprobación de pieza en el destino: diferente color y rey.
+        #5. Comprobación de piezas que no se pueden capturar: del mismo color y rey.
+        fila_destino_tablero: int = TAMANO_TABLERO - 1 - destino[0]         #Conversión de la fila al índice de la matriz.
 
-        fila_destino_tablero: int = TAMANO_TABLERO - 1 - destino[0]     #Conversión de la fila al índice de la matriz.
+        pieza_destino: Pieza | None = self.casillas[fila_destino_tablero][destino[1]]       #Consulta de pieza en el destino.
 
-        pieza_destino: Pieza | None = self.casillas[fila_destino_tablero][destino[1]]       #Consulta si hay una pieza en el destino.
-
-        if pieza_destino is not None:                        #Si la hay, no puede ser del mismo color de las piezas en turno.
-            if pieza_destino.color == color_turno:
-                return "La casilla de destino está ocupada por una pieza propia."
-
-        #El rey no se puede captura: la partida termina por jaque mate.
         if pieza_destino is not None:
-            if pieza_destino.nombre == "rey":
+            if pieza_destino.color == color_turno:      #Si hay una, no puede ser del mismo color de las piezas en turno.
+                return "La casilla de destino está ocupada por una pieza propia."
+            if pieza_destino.nombre == "rey":           #Si hay una, no puede ser un rey (no se captura, es jaque mate y termina la partida).
                 return "No se puede capturar al rey."
 
-        #6. Comprobación de las reglas de cada pieza:
+        #6. Comprobación de las reglas de cada tipo de pieza:
 
         #Se llama al método correspondiente al tipo de pieza.
         movimiento_permitido: bool = pieza_origen.es_movimiento_valido(self, origen, destino)
@@ -449,18 +427,19 @@ class Tablero:
         if not movimiento_permitido:
             return "No es válido para esta pieza (" + pieza_origen.nombre + ")."
 
-        #7. Comprobación de que no dejamos al rey propio en jaque.
+        #7. Comprobación de no dejar al rey propio en jaque.
 
         if self.deja_rey_en_jaque(origen, destino, color_turno):
             return "¡Tu rey rey quedaría en jaque!"
 
-        #Si el movimiento supera todas las comprobaciones anteriores, se devuelve un texto vacío para indicar que es válido.
+        #Una cadena vacía indica que no hay motivo para rechazar el movimiento.
         return ""
 
     
     def buscar_rey(self, color: str) -> tuple[int, int] | None:
         """Busca el rey del color indicado y devuelve sus coordenadas."""
 
+        #El bucle reccorre todas las casillas de la matriz hasta encontrar una pieza cuyo nombre sea "rey" y cuyo color sea el solicitado.
         for fila in range(TAMANO_TABLERO):
             for columna in range(TAMANO_TABLERO):
 
@@ -469,10 +448,11 @@ class Tablero:
                 if pieza is not None:
                     if pieza.nombre == "rey" and pieza.color == color:
 
-                        fila_coordenada: int = TAMANO_TABLERO - 1 - fila
+                        fila_coordenada: int = TAMANO_TABLERO - 1 - fila     #La matriz se recorre de arriba abajo, pero las coordenadas del juego cuentan desde la fila inferior.
 
                         return fila_coordenada, columna
 
+        #Si se recorre el tablero sin encontrarlo, no hay posición.
         return None
 
 
@@ -482,7 +462,7 @@ class Tablero:
         for fila in range(TAMANO_TABLERO):              #Se recorren todas las casillas mediante un bucle.
             for columna in range(TAMANO_TABLERO):
 
-                #Se consulta la piezaque hay en cada casilla.
+                #Se consulta qué pieza ocupa cada casilla.
                 pieza: Pieza | None = self.casillas[fila][columna]
 
                 if pieza is not None:
@@ -511,22 +491,24 @@ class Tablero:
                                 if pieza.es_movimiento_valido(self, origen, casilla):
                                     return True
 
-        return False    #Ninguna pieza del color indicado ataca la casilla.
+        return False     #Si ninguna pieza puede llegar a esa casilla, no está atacada.
 
 
     def esta_en_jaque(self, color: str) -> bool:
         """Comprueba si el rey del color indicado está en jaque."""
 
-        posicion_rey: tuple[int, int] | None = self.buscar_rey(color)
-
+        posicion_rey: tuple[int, int] | None = self.buscar_rey(color)   #Se localiza al rey con la función buscar_rey.
+        
         if posicion_rey is None:
-            return False
+            return False                                                #Si no se encuentra, no hay casilla que comprobar.
 
+        #El atacante siempre será el color contrario al del rey.
         if color == "blanca":
             color_atacante: str = "negra"
         else:
             color_atacante = "blanca"
 
+        #Si alguna pieza rival puede atacar esa casilla, hay jaque.
         return self.casilla_atacada(posicion_rey, color_atacante)
 
 
@@ -537,18 +519,18 @@ class Tablero:
         fila_origen: int = TAMANO_TABLERO - 1 - origen[0]
         fila_destino: int = TAMANO_TABLERO - 1 - destino[0]
 
-        #Guardar las piezas de ambas casillas.
+        #Guardar las piezas de ambas casillas para poder deshacer la simulación.
         pieza_origen: Pieza | None = self.casillas[fila_origen][origen[1]]
         pieza_destino: Pieza | None = self.casillas[fila_destino][destino[1]]
 
-        #Simular el movimiento.
+        #Aplicación del movimiento, sin modificar el historial.
         self.casillas[fila_destino][destino[1]] = pieza_origen
         self.casillas[fila_origen][origen[1]] = None
 
-        #Comprobamos si el rey está en jaque.
+        #Se comprueba si el rey está en jaque con el tablero simulado.
         rey_en_jaque: bool = self.esta_en_jaque(color)
 
-        #Se restaura el tablero a su posición original.
+        #Se recupera la posición anterior, independientemente del resultado.
         self.casillas[fila_origen][origen[1]] = pieza_origen
         self.casillas[fila_destino][destino[1]] = pieza_destino
 
@@ -582,7 +564,7 @@ class Tablero:
                                 if motivo == "":
                                     return True
 
-        # Ninguna pieza tiene un movimiento legal.
+        #Si ninguna combinación es válida, el jugador no puede mover.
         return False
 
 
@@ -604,7 +586,7 @@ def cargar_historial(ruta: str) -> list[str]:
     """Carga el historial de movimientos desde un fichero, si existe."""
 
     movimientos: list[str] = []
-    if os.path.exists(ruta):
+    if os.path.exists(ruta):                #Solo se intenta leer el archivo si existe.
         with open(ruta, "r") as fichero:
             for linea in fichero:
                 movimiento: str = linea.strip()
@@ -617,9 +599,9 @@ def cargar_historial(ruta: str) -> list[str]:
 def exportar_historial_csv(movimientos: list[str], ruta: str) -> None:
     """Exporta el historial con número, turno, origen y destino de cada movimiento a CSV."""
 
-    with open(ruta, "w", newline="") as fichero:
+    with open(ruta, "w", newline="") as fichero:        #newline="" evita líneas vacías adicionales al escribir el CSV.
         escritor = csv.writer(fichero)
-        escritor.writerow(["numero", "turno", "origen", "destino"])
+        escritor.writerow(["numero", "turno", "origen", "destino"])     #Primera fila: nombres de las columnas.
 
         for indice in range(len(movimientos)):
             numero: int = indice + 1
@@ -633,10 +615,10 @@ def exportar_historial_csv(movimientos: list[str], ruta: str) -> None:
 
 
 def reconstruir_tablero(tablero: Tablero, movimientos: list[str]) -> str:
-    """Reconstruye el tablero cuando valida el historial; indica si es válido, inválido o terminado.."""
+    """Reproduce los movimientos guardados y comprueba si el historial es válido, inválido o la partida terminó."""
 
     for indice in range(len(movimientos)):
-        movimiento: str = movimientos[indice]
+        movimiento: str = movimientos[indice]       #Se recupera cada movimiento en el orden guardado.
 
         if indice % 2 == 0:
             color_turno: str = "blanca"
@@ -653,11 +635,11 @@ def reconstruir_tablero(tablero: Tablero, movimientos: list[str]) -> str:
         if casillas is None:
             return "invalida"
 
-        origen: tuple[int, int] = convertir_casilla_a_coordenadas(casillas[0])
-        destino: tuple[int, int] = convertir_casilla_a_coordenadas(casillas[1])
+        origen: tuple[int, int] = convertir_casilla(casillas[0])
+        destino: tuple[int, int] = convertir_casilla(casillas[1])
         tablero.mover_pieza(origen, destino)
 
-        #Si la partida acabó, no puede contener más movimientos.
+        #No puede haber movimientos posteriores a una posición final.
         if not tablero.tiene_movimientos_validos(color_siguiente):
             if indice != len(movimientos) - 1:
                 return "invalida"
@@ -679,7 +661,7 @@ def gestionar_turno(tablero: Tablero, color_turno: str,  historial: list[str]) -
     texto: str = input("Introduce un movimiento (origen destino), 'exportar' o 'salir': ")
 
     #Validación de ordenes especiales:
-    orden: str = texto.strip().lower()
+    orden: str = texto.strip().lower()      #Las órdenes especiales no consumen turno.
 
     if orden == "salir":
         return "salir"
@@ -695,7 +677,7 @@ def gestionar_turno(tablero: Tablero, color_turno: str,  historial: list[str]) -
         print()
         return "invalido"
 
-    #Si llega aquí, el movimiento es válido.
+    #Solo se continúa si la validación no ha encontrado errores.
     movimiento: tuple[str, str] | None = procesar_movimiento(texto)
     if movimiento is None:
         return "invalido"
@@ -703,31 +685,34 @@ def gestionar_turno(tablero: Tablero, color_turno: str,  historial: list[str]) -
     casilla_origen: str = movimiento[0]
     casilla_destino: str = movimiento[1]
 
-    origen: tuple[int, int] = convertir_casilla_a_coordenadas(casilla_origen)
-    destino: tuple[int, int] = convertir_casilla_a_coordenadas(casilla_destino)
+    origen: tuple[int, int] = convertir_casilla(casilla_origen)
+    destino: tuple[int, int] = convertir_casilla(casilla_destino)
 
-    #Se aplica el movimiento ya validado.
+    #Se actualiza el tablero y se registra el movimiento.
     tablero.mover_pieza(origen, destino)
 
     historial.append(casilla_origen + " " + casilla_destino)
     guardar_historial(historial, "partida.txt")
 
     print("Movimiento aplicado:", casilla_origen, "->", casilla_destino)
-    
+
     print()
-    print("________________________________")   #Línea separadora antes del nuevo tablero.
+    print("________________________________")
     print()
 
-    tablero.imprimir_tablero()  #Se imprime el tablero con el nuevo movimiento.
+    tablero.imprimir_tablero()  #Se imprime el tablero con la nueva posición.
 
     return "valido"
 
 def comprobar_estado_partida(tablero: Tablero, color: str) -> bool:
     """Anuncia jaque, jaque mate o rey ahogado y devuelve si terminó la partida."""
 
+    #Para distinguir los tres casos se comprueba si su rey está atacado y si dispone de algún movimiento legal.
     en_jaque: bool = tablero.esta_en_jaque(color)
     tiene_movimientos: bool = tablero.tiene_movimientos_validos(color)
 
+    # Para distinguir los tres casos se comprueba si su rey está atacado
+        # y si dispone de algún movimiento legal.
     if en_jaque:
         if not tiene_movimientos:
             print("¡Jaque mate!")
@@ -752,7 +737,7 @@ def comprobar_estado_partida(tablero: Tablero, color: str) -> bool:
 
 # __________ Bucle principal: máquina de estados __________
 
-"""El juego utiliza una máquina de estados que alterna entre el turno de las blancas y el turno de las negras."""
+"""El juego utiliza una máquina de estados que alterna los turnos y termina cuando se acaba la partida o se elige salir."""
 
 def jugar_partida() -> None:
     """Gestiona los turnos y el final de la partida."""
@@ -762,8 +747,9 @@ def jugar_partida() -> None:
     tablero: Tablero = Tablero()
     historial: list[str] = []
 
-    # ________ Elegir partida nueva o cargar una guardada ________
+    # _____ Elegir partida nueva o cargar una guardada _____
 
+    #Si hay una partida guardada, se ofrece recuperarla antes de empezar.
     if os.path.exists("partida.txt"):
         opcion: str = input("¿Quieres cargar una partida guardada? (s/n): ").strip().lower()
     
@@ -785,9 +771,7 @@ def jugar_partida() -> None:
                 print()
                 print("Partida cargada correctamente.")
 
-    # ________ Mostrar tablero y cabecera ________
-
-    # ________ Mensaje de inicio y mostrar tablero ________
+    # _____ Mostrar tablero y mensaje de inicio _____
 
     print()
 
@@ -799,12 +783,14 @@ def jugar_partida() -> None:
     print()
     tablero.imprimir_tablero()
 
-    # ________ Recuperar el turno ________
+    # _____ Recuperar el turno _____
 
-    estado: str = "turno_blancas"  #Una partida nueva siempre empieza con blancas.
+    estado: str = "turno_blancas"   #Las blancas empiezan; un historial impar indica que siguen las negras.
+    #Cada movimiento válido cambia de turno; la paridad permite recuperarlo.
     if len(historial) % 2 != 0:
         estado = "turno_negras"
 
+    #El bucle continúa hasta recibir "salir" o detectar el final de la partida.
     while estado != "fin_partida":
 
         # ________ Turno de las blancas ________
@@ -853,7 +839,7 @@ def jugar_partida() -> None:
                 else:
                     estado = "turno_blancas"
 
-        # Si el movimiento es inválido, no cambia el estado.
+        #Un movimiento rechazado mantiene el turno del mismo jugador.
 
     print()
     print("________________________________")
